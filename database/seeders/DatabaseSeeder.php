@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             DeductionSeeder::class,
             EmployeeSeeder::class,
             DtrSeeder::class,
+            DecemberDtrSeeder::class,
             PayrollSeeder::class,
         ]);
     }
