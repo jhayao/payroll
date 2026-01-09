@@ -55,10 +55,10 @@
                             </div>
 
                             <div class="grid lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                                <x-input name="position" label="Position" value="{{ $employee->position_id }}"
+                                <x-input name="position" label="Position" value="{{ $employee->position->description }}"
                                     :readonly="true" />
 
-                                <x-input name="department" label="Department" value="{{ $employee->department_id }}"
+                                <x-input name="department" label="Department" value="{{ $employee->department->name }}"
                                     :readonly="true" />
 
                                 <x-input name="email" label="Email" value="{{ old('email', $employee->email) }}"

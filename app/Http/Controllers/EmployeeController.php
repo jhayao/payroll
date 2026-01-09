@@ -27,7 +27,7 @@ class EmployeeController extends Controller
 
     public function profile()
     {
-        $employee = Employee::find(auth()->user()->id);
+        $employee = Employee::with(['position', 'department'])->find(auth()->user()->id);
         return view('pages.employees.profile', compact('employee'));
     }
 
