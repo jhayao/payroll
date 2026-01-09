@@ -2,15 +2,16 @@
     <div class="py-14 max-w-7xl mx-auto">
 
         <x-breadcrumb :items="[
-            ['label' => 'Shifts', 'url' => route('shifts')],
-            ['label' => 'Edit Shift']
-        ]" />
+        ['label' => 'Shifts', 'url' => route('shifts')],
+        ['label' => 'Edit Shift']
+    ]" />
 
         <div class="font-bold text-gray-700 text-xl dark:text-white">Edit Shift</div>
-        
+
         <div class="mt-6">
 
-            <div class="bg-white border border-slate-200 dark:bg-gray-800 relative sm:rounded shadow-sm overflow-hidden">
+            <div
+                class="bg-white border border-slate-200 dark:bg-gray-800 relative sm:rounded shadow-sm overflow-hidden">
                 <div class="p-8">
 
                     <form action="{{ route('shifts.update', $shift->id) }}" method="POST">
@@ -20,41 +21,34 @@
 
                         <div class="max-w-xl mt-6">
 
-                            <x-input 
-                                name="name"
-                                label="Name"
-                                value="{{ old('name', $shift->name) }}"
-                                notice="(Required)"
-                            />
+                            <x-input name="name" label="Name" value="{{ old('name', $shift->name) }}"
+                                notice="(Required)" />
 
-                            <div class="grid md:grid-cols-2 gap-4">
-                                <x-input 
-                                    name="am_in"
-                                    label="AM In"
-                                    value="{{ old('am_in', $shift->am_in) }}"
-                                    notice="(Required)"
-                                />
-                                <x-input 
-                                    name="am_out"
-                                    label="AM Out"
-                                    value="{{ old('am_out', $shift->am_out) }}"
-                                    notice="(Required)"
-                                />
+                            <div class="mt-4 mb-2" x-data="{ isHoliday: {{ old('is_holiday', $shift->is_holiday) ? 'true' : 'false' }} }">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" name="is_holiday" value="1" x-model="isHoliday"
+                                        class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500">
+                                    <span class="ml-2 text-sm text-gray-600">Is Holiday?</span>
+                                </label>
+
+                                <div x-show="isHoliday" class="mt-4">
+                                    <x-input name="rate_percentage" label="Rate Percentage (%)" type="number" value="{{ old('rate_percentage', $shift->rate_percentage ?? 100) }}"
+                                        notice="(e.g. 200 for Double Pay)" />
+                                </div>
                             </div>
 
                             <div class="grid md:grid-cols-2 gap-4">
-                                <x-input 
-                                    name="pm_in"
-                                    label="PM In"
-                                    value="{{ old('pm_in', $shift->pm_in) }}"
-                                    notice="(Required)"
-                                />
-                                <x-input 
-                                    name="pm_out"
-                                    label="PM Out"
-                                    value="{{ old('pm_out', $shift->pm_out) }}"
-                                    notice="(Required)"
-                                />
+                                <x-input name="am_in" label="AM In" type="time"
+                                    value="{{ old('am_in', $shift->am_in) }}" notice="(Required)" />
+                                <x-input name="am_out" label="AM Out" type="time"
+                                    value="{{ old('am_out', $shift->am_out) }}" notice="(Required)" />
+                            </div>
+
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <x-input name="pm_in" label="PM In" type="time"
+                                    value="{{ old('pm_in', $shift->pm_in) }}" notice="(Required)" />
+                                <x-input name="pm_out" label="PM Out" type="time"
+                                    value="{{ old('pm_out', $shift->pm_out) }}" notice="(Required)" />
                             </div>
 
                             <!--
@@ -74,7 +68,7 @@
                             </div>
                             -->
                         </div>
-                    
+
                         <div class="flex items-center space-x-2 mt-6">
                             <x-primary-button>
                                 Save changes
@@ -83,13 +77,13 @@
                                 Cancel
                             </x-secondary-button>
                         </div>
-                    
+
                     </form>
 
                 </div>
             </div>
 
         </div>
-        
+
     </div>
 </x-app-layout>

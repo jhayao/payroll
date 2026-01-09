@@ -91,7 +91,7 @@
                                 </tr>
                                 <tr>
                                     <td>Rate:</td>
-                                    <td class="text-end">{{ $item->employee->position->formatted_daily_rate }}</td>
+                                    <td class="text-end">{{ $item->employee->formatted_daily_rate }}</td>
                                 </tr>
                                 <tr>
                                     <td>Overtime:</td>

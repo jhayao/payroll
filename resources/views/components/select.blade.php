@@ -29,6 +29,7 @@
             'border-red-500 focus:border-red-500 focus:ring-red-500' => $hasError,
         ]) }}
     >
+        {{ $slot }}
         @foreach($options as $key => $value)
             <option value="{{ $key }}" {{ old($name, $attributes->get('value')) == $key ? 'selected' : '' }}>
                 {{ $value }}

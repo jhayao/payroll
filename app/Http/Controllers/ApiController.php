@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Http\Request;
 use App\Models\Dtr;
 use App\Models\Employee;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class ApiController extends Controller
 {
@@ -19,30 +19,30 @@ class ApiController extends Controller
             'pm_in', 'pm_out',
             'ot_in', 'ot_out',
         ];
-    
+
         $employeeId = $request->employee_id;
         $mark = $request->mark;
-    
-        if (!in_array($mark, $allowedMarks)) {
+
+        if (! in_array($mark, $allowedMarks)) {
             return response()->json([
                 'status' => 'failed',
                 'message' => 'Invalid log type.',
             ], 422);
         }
-    
+
         $today = $request->date_log;
-    
+
         // ✅ Create or get today's DTR
         $dtr = Dtr::firstOrCreate([
             'employee_id' => $employeeId,
             'log_date' => $today,
         ]);
-    
+
         // ✅ Check if already logged
-        if (!is_null($dtr->$mark)) {
+        if (! is_null($dtr->$mark)) {
             return response()->json([
                 'status' => 'duplicate',
-                'message' => strtoupper(str_replace('_', ' ', $mark)) . ' already recorded.',
+                'message' => strtoupper(str_replace('_', ' ', $mark)).' already recorded.',
                 'data' => [
                     'employee_id' => $employeeId,
                     'fullname' => $dtr->employee->full_name,
@@ -51,14 +51,14 @@ class ApiController extends Controller
                 ],
             ], 200);
         }
-    
+
         // ✅ Save log
         $dtr->$mark = $request->time_log;
         $dtr->save();
-    
+
         return response()->json([
             'status' => 'success',
-            'message' => strtoupper(str_replace('_', ' ', $mark)) . ' recorded successfully.',
+            'message' => strtoupper(str_replace('_', ' ', $mark)).' recorded successfully.',
             'data' => [
                 'employee_id' => $employeeId,
                 'fullname' => $dtr->employee->full_name,
@@ -67,7 +67,6 @@ class ApiController extends Controller
             ],
         ], 200);
     }
-
 
     public function viewDTR(Request $request)
     {
@@ -80,27 +79,27 @@ class ApiController extends Controller
         return view('dtr.view', [
             'employee' => $employee,
             'from' => $from,
-            'to' => $to
+            'to' => $to,
         ]);
     }
 
     public function verifyTimekeeper(Request $request)
     {
         $user = User::where('email', $request->email)
-                    ->where('role', 'timekeeper')
-                    ->first();
+            ->where('role', 'timekeeper')
+            ->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'status' => 'failed',
-                'message' => 'Access denied. Email not found.'
+                'message' => 'Access denied. Email not found.',
             ], 404);
         }
 
-        if (!Hash::check($request->password, $user->password)) {
+        if (! Hash::check($request->password, $user->password)) {
             return response()->json([
                 'status' => 'failed',
-                'message' => 'Incorrect password.'
+                'message' => 'Incorrect password.',
             ], 401);
         }
 
@@ -112,9 +111,8 @@ class ApiController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role,
-            ]
+            ],
         ]);
 
     }
-
 }

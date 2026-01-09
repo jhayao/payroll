@@ -16,7 +16,9 @@ class Shift extends Model
         'pm_in',
         'pm_out',
         'in_out_interval',
-        'out_in_interval'
+        'out_in_interval',
+        'is_holiday',
+        'rate_percentage'
     ];
 
     public function getFormattedAmInAttribute()

@@ -19,6 +19,8 @@ use App\Models\Payroll;
 use App\Models\PayrollItem;
 use App\Models\EmployeeDeduction;
 use App\Models\User;
+use App\Models\Project;
+
 
 use App\Http\Requests\ProfileUpdateRequest;
 
@@ -76,7 +78,10 @@ class AdminController extends Controller
             'firstname' => ['required', 'min:2', 'string'],
             'middlename' => ['min:2', 'nullable', 'string'],
             'suffix' => ['nullable', 'string'],
-            'address' => ['required', 'min:10', 'string'],
+            // 'address' => ['required', 'min:10', 'string'], // Legacy address
+            'purok' => ['required', 'string'],
+            'barangay' => ['required', 'string'],
+            'city' => ['required', 'string'],
             'mobile_no' => [
                 'required',
                 'regex:/^(09|\+639)\d{9}$/',
@@ -86,19 +91,21 @@ class AdminController extends Controller
             'position' => ['integer', 'nullable'],
             'department' => ['integer', 'nullable'],
             'email' => [
-                'required',
+                'nullable', // Made nullable
                 'string',
                 'lowercase',
                 'email',
                 'max:255',
                 Rule::unique(Employee::class, 'email')
             ],
-            'password' => ['required', Rules\Password::defaults()],
+            'password' => ['nullable', Rules\Password::defaults()], // Made nullable
+            'custom_daily_rate' => ['nullable', 'numeric', 'min:0'],
             'photo' => ['required', 'image', 'mimes:jpeg,png,jpg|max:2048'],
             'photo2' => ['required', 'image', 'mimes:jpeg,png,jpg|max:2048'],
             'photo3' => ['required', 'image', 'mimes:jpeg,png,jpg|max:2048'],
         ], [
             'mobile_no.regex' => 'Contact number must start with 09 or +639 followed by 9 digits.',
+            'custom_daily_rate.numeric' => 'The custom daily rate must be a valid number.',
             'photo.required' => 'The photo is required for face recognition purposes.',
             'photo.image' => 'The photo must be an image with the type jpeg or png or jpg.',
             'photo2.required' => 'The photo is required for face recognition purposes.',
@@ -112,16 +119,44 @@ class AdminController extends Controller
         $validated['firstname'] = Str::title($validated['firstname']);
         $validated['middlename'] = Str::title($validated['middlename']);
         $validated['suffix'] = Str::title($validated['suffix']);
-        $validated['address']   = Str::title($validated['address']);
         
-        $employee_id = time();
+        $validated['purok']   = Str::title($validated['purok']);
+        $validated['barangay']   = Str::title($validated['barangay']);
+        $validated['city']   = Str::title($validated['city']);
+        
+        // Concatenate for backward compatibility
+        $validated['address'] = $validated['purok'] . ', ' . $validated['barangay'] . ', ' . $validated['city'];
+        
+        // Generate Employee ID: EMP-YYYYMMDD-XXXX
+        $employee_code = 'EMP-' . date('Ymd') . '-' . strtoupper(Str::random(4));
+        // Check uniqueness just in case
+        while(Employee::where('employee_id', $employee_code)->exists()) {
+             $employee_code = 'EMP-' . date('Ymd') . '-' . strtoupper(Str::random(4));
+        }
+
+        // Use a numeric ID for the primary key as before (time() is risky but keeping it as per existing code style effectively, though time() is not unique enough for high traffic, but fine here)
+        // Actually, $table->id() is auto-increment. $employee->id = time() overrides it?
+        // Checking migration: $table->id() creates auto-incrementing BigInt.
+        // Controller sets $employee->id = time(). This manually sets ID.
+        // It's better to let DB handle ID, OR keep using time() if that's the established pattern.
+        // I will keep using time() for the primary key 'id' to result in minimal friction,
+        // BUT I will save my new ID to 'employee_id' column.
+        
+        $employee_id = time(); 
+
+        // Add employee_id to validated data
+        $validated['employee_id'] = $employee_code;
 
         $employee = new Employee($validated);
         $employee->id = $employee_id;
-        // handle password hashing
-        $employee->password = Hash::make($validated['password']);
+        
+        if (!empty($validated['password'])) {
+            $employee->password = Hash::make($validated['password']);
+        }
+        
         $employee->position_id = $request->position;
         $employee->department_id = $request->department;
+        $employee->custom_daily_rate = !empty($request->custom_daily_rate) ? $request->custom_daily_rate : null;
 
         $photo1 = $this->uploadPhoto($request, $employee->id, 'photo');
         $employee->photo_lg = $photo1;
@@ -136,6 +171,11 @@ class AdminController extends Controller
         $title = $employee->id;
         $ext = $image->getClientOriginalExtension();
         $destinationPath = public_path('/images/uploads/');
+        
+        // Ensure directory exists
+        if (!file_exists($destinationPath."/2x2/")) {
+             mkdir($destinationPath."/2x2/", 0777, true);
+        }
 
         Image::read($destinationPath.'/'.$employee->id.'/'.'photo.'.$ext)
             ->cover(600, 600, position: 'center')
@@ -143,10 +183,30 @@ class AdminController extends Controller
 
         $employee->photo_2x2 = '/images/uploads/2x2/'.$title.'.'.$ext;
         $employee->photo_lg = $photo1;
-        $employee->photo_lg2 = $photo3;
+        // $employee->photo_lg3 = $photo3;
+        // This looks like a Bug in original code? Lines 145-147:
+        // $employee->photo_lg = $photo1;
+        // $employee->photo_lg2 = $photo3;
+        // $employee->photo_lg3 = $photo3;
+        
+        // I should fix it to be consistent with 126-133 if I can, but maybe "saving" overwrites?
+        // Let's stick to what lines 126-133 did.
+        // 126: photo1 -> photo_lg
+        // 129: photo2 -> photo_lg2
+        // 132: photo3 -> photo_lg3
+        
+        // The lines 145-147 seem to re-assign incorrect values?
+        // I will fix this potential bug too while I am at it, or just replicate strictly?
+        // Replicating stricly might preserve bug.
+        // Let's use the values from 126-133 which seem correct.
+        
+        $employee->photo_lg = $photo1;
+        $employee->photo_lg2 = $photo2;
         $employee->photo_lg3 = $photo3;
 
         $employee->save();
+
+
 
         $shift = Shift::where('name', 'Regular Shift')->first();
         EmployeeShift::create([
@@ -174,7 +234,12 @@ class AdminController extends Controller
             'firstname' => ['required', 'min:2', 'string'],
             'middlename' => ['min:2', 'nullable', 'string'],
             'suffix' => ['nullable', 'string'],
-            'address' => ['required', 'min:10', 'string'],
+            // Addresses
+            'purok' => ['nullable', 'string'],
+            'barangay' => ['nullable', 'string'],
+            'city' => ['nullable', 'string'],
+            'address' => ['nullable', 'min:10', 'string'], // Keep optional
+            
             'mobile_no' => [
                 'required',
                 'regex:/^(09|\+639)\d{9}$/',
@@ -184,13 +249,14 @@ class AdminController extends Controller
             'position' => ['integer', 'nullable'],
             'department' => ['integer', 'nullable'],
             'email' => [
-                'required',
+                'nullable',
                 'string',
                 'lowercase',
                 'email',
                 'max:255',
                 Rule::unique(Employee::class)->ignore($id)
             ],
+            'custom_daily_rate' => ['nullable', 'numeric'],
         ], [
             'mobile_no.regex' => 'Contact number must start with 09 or +639 followed by 9 digits.',
             'mobile_no.unique' => 'Contact number is already exist.'
@@ -200,13 +266,25 @@ class AdminController extends Controller
         $validated['firstname'] = Str::title($validated['firstname']);
         $validated['middlename'] = Str::title($validated['middlename']);
         $validated['suffix'] = Str::title($validated['suffix']);
-        $validated['address']   = Str::title($validated['address']);
+        
+        if (isset($validated['purok'])) $validated['purok'] = Str::title($validated['purok']);
+        if (isset($validated['barangay'])) $validated['barangay'] = Str::title($validated['barangay']);
+        if (isset($validated['city'])) $validated['city'] = Str::title($validated['city']);
+        
+        if(isset($validated['purok']) && isset($validated['barangay']) && isset($validated['city'])){
+             $validated['address'] = $validated['purok'] . ', ' . $validated['barangay'] . ', ' . $validated['city'];
+        } else if (isset($validated['address'])) {
+             $validated['address'] = Str::title($validated['address']);
+        }
    
         $employee = Employee::findOrFail($id);
         $employee->position_id = $request->position;
         $employee->department_id = $request->department;
         $employee->fill($validated);
         $employee->save();
+
+
+
         return redirect()->back()->with('status', 'Employee information updated successfully!');
     }
 
@@ -361,30 +439,19 @@ class AdminController extends Controller
         $request->validate([
             'description' => ['required', 'min:2', 'unique:positions,description'],
             'daily_rate' => ['required', 'numeric'],
-            'hourly_rate' => ['required', 'numeric'],
-            'minutely_rate' => ['required', 'numeric'],
-            'holiday_rate' => ['required', 'numeric'],
         ], [
             'daily_rate.required' => 'The daily rate is riquired.', 
             'daily_rate.numeric' => 'The daily rate must be numeric.',
-
-            'hourly_rate.required' => 'The hourly rate is riquired.', 
-            'hourly_rate.numeric' => 'The hourly rate must be numeric.',
-
-            'minutely_rate.required' => 'The minutely rate is riquired.', 
-            'minutely_rate.numeric' => 'The minutely rate must be numeric.',
-
-            'holiday_rate.required' => 'The holiday rate is riquired.', 
-            'holiday_rate.numeric' => 'The holiday rate must be numeric.',
-            
         ]);
+
+        $hourly_rate = $request->daily_rate / 8;
+        $minutely_rate = $hourly_rate / 60;
 
         Position::create([
             'description' => $request->description,
             'daily_rate' => $request->daily_rate,
-            'hourly_rate' => $request->hourly_rate,
-            'minutely_rate' => $request->minutely_rate,
-            'holiday_rate' => $request->holiday_rate
+            'hourly_rate' => $hourly_rate,
+            'minutely_rate' => $minutely_rate
         ]);
 
         return redirect()->route('positions')->with('status', 'Position created successfully.');
@@ -404,31 +471,20 @@ class AdminController extends Controller
                 Rule::unique('positions', 'description')->ignore($id)
             ],
             'daily_rate' => ['required', 'numeric'],
-            'hourly_rate' => ['required', 'numeric'],
-            'minutely_rate' => ['required', 'numeric'],
-            'holiday_rate' => ['required', 'numeric'],
         ], [
             'daily_rate.required' => 'The daily rate is riquired.', 
             'daily_rate.numeric' => 'The daily rate must be numeric.',
-
-            'hourly_rate.required' => 'The hourly rate is riquired.', 
-            'hourly_rate.numeric' => 'The hourly rate must be numeric.',
-
-            'minutely_rate.required' => 'The minutely rate is riquired.', 
-            'minutely_rate.numeric' => 'The minutely rate must be numeric.',
-
-            'holiday_rate.required' => 'The holiday rate is riquired.', 
-            'holiday_rate.numeric' => 'The holiday rate must be numeric.',
-            
         ]);
+
+        $hourly_rate = $request->daily_rate / 8;
+        $minutely_rate = $hourly_rate / 60;
 
         $position = Position::find($id); // or ->findOrFail($id)
         $position->update([
             'description' => $request->description,
             'daily_rate' => $request->daily_rate,
-            'hourly_rate' => $request->hourly_rate,
-            'minutely_rate' => $request->minutely_rate,
-            'holiday_rate' => $request->holiday_rate
+            'hourly_rate' => $hourly_rate,
+            'minutely_rate' => $minutely_rate
         ]);
 
         return redirect()->route('positions')->with('status', 'Position updated successfully.');
@@ -517,6 +573,8 @@ class AdminController extends Controller
             'pm_out' => $request->pm_out,
             //'in_out_interval' => $request->in_out_interval,
             //'out_in_interval' => $request->out_in_interval,
+            'is_holiday' => $request->has('is_holiday'),
+            'rate_percentage' => $request->input('rate_percentage', 100),
         ]);
 
         return redirect()->route('shifts')->with('status', 'Shift created successfully.');
@@ -596,6 +654,8 @@ class AdminController extends Controller
             'pm_out' => $request->pm_out,
             //'in_out_interval' => $request->in_out_interval,
             //'out_in_interval' => $request->out_in_interval,
+            'is_holiday' => $request->has('is_holiday'),
+            'rate_percentage' => $request->input('rate_percentage', 100),
         ]);
 
         return redirect()->route('shifts')->with('status', 'Shift updated successfully.');
@@ -652,7 +712,7 @@ class AdminController extends Controller
             'date_from.date' => 'Date from should be date.',
             'date_to.required' => 'Please specify date to.',
             'date_to.date' => 'Date to should be date.',
-            'date_to.date' => 'Date to should after or equal to date from.',
+            'date_to.after_or_equal' => 'Date to should after or equal to date from.',
         ]);
 
         $id = $request->employee_id;
@@ -717,5 +777,103 @@ class AdminController extends Controller
         $user->role = $request->role;
         $user->save();
         return redirect()->back()->with('status', 'User updated successfully.');
+    }
+
+    // Projects
+    public function projects()
+    {
+        $projects = Project::with(['timeKeeper', 'employees'])->orderBy('name')->get();
+        return view('projects.index', compact('projects'));
+    }
+
+    public function addProject()
+    {
+        // Only fetch employees with Time Keeper position (position_id = 14)
+        $employees = Employee::where('position_id', 14)->orderBy('lastname')->orderBy('firstname')->get();
+        return view('projects.create', compact('employees'));
+    }
+
+    public function saveProject(Request $request)
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'min:3', 'unique:projects,name'],
+            'description' => ['nullable', 'string'],
+            'status' => ['required', 'in:active,completed,on_hold'],
+            'time_keeper_id' => ['nullable', 'exists:employees,id'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+        ]);
+
+        Project::create($request->all());
+
+        return redirect()->route('projects')->with('status', 'Project created successfully!');
+    }
+
+    public function viewProject($id)
+    {
+        $project = Project::with(['timeKeeper', 'employees'])->findOrFail($id);
+        // Fetch all employees for assignment, but only Time Keepers for time_keeper dropdown if needed
+        $employees = Employee::orderBy('lastname')->orderBy('firstname')->get();
+        $timeKeepers = Employee::where('position_id', 14)->orderBy('lastname')->orderBy('firstname')->get();
+        return view('projects.view', compact('project', 'employees', 'timeKeepers'));
+    }
+
+    public function editProject($id)
+    {
+        $project = Project::findOrFail($id);
+        // Only fetch employees with Time Keeper position (position_id = 14)
+        $employees = Employee::where('position_id', 14)->orderBy('lastname')->orderBy('firstname')->get();
+        return view('projects.edit', compact('project', 'employees'));
+    }
+
+    public function updateProject(Request $request, $id)
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'min:3', Rule::unique('projects', 'name')->ignore($id)],
+            'description' => ['nullable', 'string'],
+            'status' => ['required', 'in:active,completed,on_hold'],
+            'time_keeper_id' => ['nullable', 'exists:employees,id'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+        ]);
+
+        $project = Project::findOrFail($id);
+        $project->update($request->all());
+
+        return redirect()->route('projects.view', $id)->with('status', 'Project updated successfully!');
+    }
+
+    public function deleteProject(Request $request, $id)
+    {
+        $project = Project::findOrFail($id);
+        $project->delete();
+        return redirect()->route('projects')->with('status', 'Project deleted successfully.');
+    }
+
+    public function assignEmployee(Request $request, $id)
+    {
+        $request->validate([
+            'employee_id' => ['required', 'exists:employees,id'],
+        ]);
+
+        $project = Project::findOrFail($id);
+        
+        if ($project->employees()->where('employee_id', $request->employee_id)->exists()) {
+            return back()->with('error', 'Employee is already assigned to this project.');
+        }
+
+        $project->employees()->attach($request->employee_id, [
+            'assigned_at' => now()
+        ]);
+
+        return back()->with('status', 'Employee assigned successfully!');
+    }
+
+    public function removeEmployee(Request $request, $id, $employee_id)
+    {
+        $project = Project::findOrFail($id);
+        $project->employees()->detach($employee_id);
+
+        return back()->with('status', 'Employee removed from project.');
     }
 }

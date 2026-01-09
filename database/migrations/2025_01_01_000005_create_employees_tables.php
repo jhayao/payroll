@@ -38,13 +38,6 @@ return new class extends Migration
             $table->double('amount')->nullable();
         });
 
-        Schema::create('employee_benefits', function (Blueprint $table) {
-            $table->id();
-            $table->integer('employee_id')->nullable();
-            $table->string('description', 100)->nullable();
-            $table->double('amount')->nullable();
-        });
-
         Schema::create('employee_deductions', function (Blueprint $table) {
             $table->id();
             $table->integer('payroll_item_id')->nullable();
@@ -73,7 +66,6 @@ return new class extends Migration
     {
         Schema::dropIfExists('employees');
         Schema::dropIfExists('employee_allowances');
-        Schema::dropIfExists('employee_benefits');
         Schema::dropIfExists('employee_deductions');
         Schema::dropIfExists('employee_shifts');
         Schema::dropIfExists('employee_password_reset_tokens');

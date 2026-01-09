@@ -14,7 +14,6 @@ class Position extends Model
         'daily_rate',
         'hourly_rate',
         'minutely_rate',
-        'holiday_rate'
     ];
 
     public function employees()
@@ -35,10 +34,5 @@ class Position extends Model
     public function getFormattedMinutelyRateAttribute()
     {
         return number_format($this->minutely_rate, 2);
-    }
-
-    public function getFormattedHolidayRateAttribute()
-    {
-        return number_format($this->holiday_rate, 2);
     }
 }

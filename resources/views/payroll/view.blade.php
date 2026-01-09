@@ -3,21 +3,22 @@
     <div class="py-14 max-w-7xl mx-auto">
 
         <x-breadcrumb :items="[
-            ['label' => 'Payroll', 'url' => route('payroll')],
-            ['label' => 'View Payroll']
-        ]" />
-        
+        ['label' => 'Payroll', 'url' => route('payroll')],
+        ['label' => 'View Payroll']
+    ]" />
+
         <div class="font-bold text-gray-700 text-xl dark:text-white">View Payroll</div>
-        
+
         <div class="mt-6">
 
-            <div class="bg-white border border-slate-200 dark:bg-gray-800 relative sm:rounded shadow-sm overflow-hidden">
+            <div
+                class="bg-white border border-slate-200 dark:bg-gray-800 relative sm:rounded shadow-sm overflow-hidden">
                 <div class="p-6">
 
                     <div class="md:flex items-center justify-between mb-3">
                         <div class="mb-3 md:mb-0">
                             <div class="text-2xl font-meduim">Payroll for {{ $payroll->department->name }}</div>
-                            
+
                             @php
                                 $from = \Carbon\Carbon::parse($payroll->date_from);
                                 $to = \Carbon\Carbon::parse($payroll->date_to);
@@ -38,10 +39,15 @@
                         </div>
 
                         <div class="mb-3 md:mb-0 flex items-center space-x-2">
+                            <form action="{{ route('payroll.regenerate', $payroll->id) }}" method="post"
+                                onsubmit="return confirm('This will delete all existing payroll items and recalculate based on current DTR data. Continue?');">
+                                @csrf
+                                <x-primary-button type="submit">Regenerate Payroll</x-primary-button>
+                            </form>
                             <form action="{{ route('payroll.generate-report') }}" method="post">
                                 @csrf
                                 <input type="hidden" name="payroll_id" value="{{ $payroll->id }}" />
-                                <x-primary-button>Generate Report</x-primary-button>    
+                                <x-primary-button>Generate Report</x-primary-button>
                             </form>
                             <form action="{{ route('payroll.generate-payslip') }}" method="post">
                                 @csrf
@@ -49,7 +55,7 @@
                                 <x-primary-button>Generate Payslips</x-primary-button>
                             </form>
                         </div>
-                        
+
                     </div>
 
                     <div class="overflow-x-auto w-full">
@@ -76,8 +82,8 @@
                                     <th>
                                         <span class="text-end">Salary</span>
                                     </th>
-                                    <th class="flex flex-row-reverse">
-                                        <span>Deductions</span>
+                                    <th class="text-end">
+                                        <span class="text-end">Deductions</span>
                                     </th>
                                     <th>
                                         <span class="text-end">Net Pay</span>
@@ -104,15 +110,19 @@
                                         <td class="text-end">{{ $e->formatted_total_deduction }}</td>
                                         <td class="text-end">{{ $e->formatted_net_pay }}</td>
                                         <td>
-                                            <a href="{{ route('payroll.item', [$payroll->id, $e->id]) }}" class="flex items-center space-x-1 text-sm font-semibold text-gray-600 hover:text-gray-800">
-                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                            <a href="{{ route('payroll.item', [$payroll->id, $e->id]) }}"
+                                                class="flex items-center space-x-1 text-sm font-semibold text-gray-600 hover:text-gray-800">
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                                    stroke-width="1.5" stroke="currentColor" class="size-4">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                                                 </svg>
                                                 <span>View</span>
                                             </a>
                                         </td>
-                                    </tr>    
+                                    </tr>
                                 @endforeach
                             </tbody>
                         </table>
@@ -121,10 +131,10 @@
                 </div>
             </div>
         </div>
-        
+
     </div>
 
-    
+
     <script>
         let table = new DataTable('#myTable', {
             lengthChange: false,

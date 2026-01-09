@@ -41,6 +41,13 @@
                                             <div class="grid lg:grid-cols-3 xl:grid-cols-4 gap-2">
                                             
                                                 <x-input 
+                                                    name="employee_id"
+                                                    label="Employee ID"
+                                                    value="{{ $employee->employee_id }}"
+                                                    :readonly="true"
+                                                />
+
+                                                <x-input 
                                                     name="lastname"
                                                     label="Last Name"
                                                     value="{{ old('lastname', $employee->lastname) }}"
@@ -64,10 +71,6 @@
                                                     value="{{ old('suffix', $employee->suffix) }}"
                                                 />
 
-                                            </div>
-
-                                            <div class="grid lg:grid-cols-3 xl:grid-cols-4 gap-2">
-
                                                 <x-select 
                                                     name="sex"
                                                     label="Sex"
@@ -77,12 +80,28 @@
                                                         'Female' => 'Female'
                                                     ]"
                                                 />
+                                            </div>
+
+                                            <div class="grid lg:grid-cols-3 xl:grid-cols-4 gap-2">
+
+                                                
 
                                                 <x-input
-                                                    name="address"
-                                                    label="Address"
-                                                    value="{{ old('address', $employee->address) }}"
-                                                    wrapperClass="xl:col-span-2 mb-6 md:mb-0"
+                                                    name="purok"
+                                                    label="Purok"
+                                                    value="{{ old('purok', $employee->purok) }}"
+                                                />
+
+                                                <x-input
+                                                    name="barangay"
+                                                    label="Barangay"
+                                                    value="{{ old('barangay', $employee->barangay) }}"
+                                                />
+
+                                                <x-input
+                                                    name="city"
+                                                    label="City"
+                                                    value="{{ old('city', $employee->city) }}"
                                                 />
 
                                                 <x-input
@@ -93,7 +112,7 @@
 
                                             </div>
 
-                                            <div class="grid lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                                            <div class="grid lg:grid-cols-3 xl:grid-cols-3 gap-2">
                                                 <x-select
                                                     name="position"
                                                     label="Position"
@@ -112,8 +131,18 @@
                                                     name="email"
                                                     label="Email"
                                                     value="{{ old('email', $employee->email) }}"
+                                                    notice="(Optional)"
+                                                />
+
+                                                <x-input 
+                                                    name="custom_daily_rate"
+                                                    label="Custom Daily Rate"
+                                                    value="{{ old('custom_daily_rate', $employee->custom_daily_rate) }}"
+                                                    notice="(Optional - Overrides Position Rate)"
                                                 />
                                             </div>
+
+
 
                                             <div class="flex items-center space-x-2 mt-10">
                                                 <x-primary-button>

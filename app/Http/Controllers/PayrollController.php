@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Allowance;
 use App\Models\Deduction;
+use App\Models\Employee;
 use App\Models\Department;
 use App\Models\Payroll;
 use App\Models\PayrollItem;
 use App\Models\EmployeeDeduction;
 use App\Models\EmployeeAllowance;
+use App\Models\Position;
+use App\Models\Holiday;
+use App\Models\Shift;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -67,39 +71,192 @@ class PayrollController extends Controller
         $to = $request->date_to;
 
         $department = Department::find($request->department);
+
+        $allAllowances = Allowance::with(['positions', 'employees'])->get();
+        $allDeductions = Deduction::with(['positions', 'employees'])->get();
+
         foreach ($department->employees as $e) {
 
             $numDays = $e->numberOfDutyDays($from, $to);
             $overtime = $e->overtime($from, $to);
             $tardiness = $e->tardiness($from, $to);
-            $dailyRate = $e->position->daily_rate;
-            $overtime_pay = $overtime * $e->position->minutely_rate; 
-            $gross = $numDays * $dailyRate + $overtime_pay;
+            $dailyRate = $e->daily_rate;
+            $overtime_pay = $overtime * $e->minutely_rate; 
+
+            // Calculate Holiday Pay
+            $holidays = Holiday::whereBetween('date', [$from, $to])->get()->keyBy('date');
+            $holidayShifts = Shift::where('is_holiday', true)->get()->keyBy('name');
+            $logs = $e->dtrRange($from, $to);
+            $holidayPay = 0;
+            
+            foreach ($logs as $log) {
+                if ($holidays->has($log->log_date)) {
+                    $holiday = $holidays[$log->log_date];
+                    // Find corresponding shift for the holiday type
+                    $shiftRate = 100;
+                    if ($holidayShifts->has($holiday->type)) {
+                        $shiftRate = $holidayShifts[$holiday->type]->rate_percentage;
+                    }
+                    
+                    if ($shiftRate > 100) {
+                        // Extra pay = DailyRate * ((Rate% - 100) / 100)
+                        $extraPercentage = ($shiftRate - 100) / 100;
+                        $holidayPay += $dailyRate * $extraPercentage;
+                    }
+                }
+            }
+
+            $gross = ($numDays * $dailyRate) + $overtime_pay + $holidayPay;
 
             $tHour = floor($tardiness['grandTotal'] / 60);
             $tMins = $tardiness['grandTotal'] % 60;
-            $tAmount = $tardiness['grandTotal'] * $e->position->minutely_rate;
+            $tAmount = $tardiness['grandTotal'] * $e->minutely_rate;
             
 
             $payrollItem = PayrollItem::create([
                 'payroll_id' => $payroll->id,
                 'employee_id' => $e->id,
                 'num_of_days' => $numDays,
-                'daily_rate' => $e->position->daily_rate,
+                'daily_rate' => $e->daily_rate,
                 'overtime' => $overtime,
                 'overtime_pay' => $overtime_pay,
                 'gross_pay' => $gross,
                 'net_pay' => $gross
             ]);
 
+            // Auto-add Allowances
+            // Auto-add Allowances
+            foreach ($allAllowances as $allowance) {
+                // Check Schedule
+                $payrollMonth = \Carbon\Carbon::parse($to)->month;
+                if ($allowance->schedule === 'specific_month' && $allowance->target_month != $payrollMonth) {
+                    continue;
+                }
+
+                $amount = 0;
+                $percentage = 0;
+                $shouldApply = false;
+
+                if ($allowance->scope === 'all') {
+                    $shouldApply = true;
+                    if ($allowance->type === 'fixed') {
+                        $amount = $allowance->amount;
+                    } elseif ($allowance->type === 'percentage') {
+                        $percentage = $allowance->percentage;
+                    }
+                } elseif ($allowance->scope === 'position') {
+                    $pivot = $allowance->positions->where('id', $e->position_id)->first();
+                    if ($pivot) {
+                        $shouldApply = true;
+                        if ($allowance->type === 'fixed') {
+                            $amount = $pivot->pivot->amount;
+                        } elseif ($allowance->type === 'percentage') {
+                            $percentage = $pivot->pivot->percentage;
+                        }
+                    }
+                } elseif ($allowance->scope === 'employee') {
+                    $pivot = $allowance->employees->where('id', $e->id)->first();
+                    if ($pivot) {
+                        $shouldApply = true;
+                        if ($allowance->type === 'fixed') {
+                            $amount = $pivot->pivot->amount;
+                        } elseif ($allowance->type === 'percentage') {
+                            $percentage = $pivot->pivot->percentage;
+                        }
+                    }
+                }
+
+                if ($shouldApply) {
+                    // Calculate Amount if Percentage
+                    if ($allowance->type === 'percentage' && $percentage > 0) {
+                         $basicPay = $numDays * $dailyRate;
+                         $amount = $basicPay * ($percentage / 100);
+                    }
+    
+                    if ($amount > 0) {
+                        EmployeeAllowance::create([
+                            'payroll_item_id' => $payrollItem->id,
+                            'description' => $allowance->description,
+                            'amount' => $amount
+                        ]);
+                    }
+                }
+            }
+
+            // Auto-add Deductions
+            foreach ($allDeductions as $deduction) {
+                // Check Schedule
+                $payrollMonth = \Carbon\Carbon::parse($to)->month;
+                if ($deduction->schedule === 'specific_month' && $deduction->target_month != $payrollMonth) {
+                    continue;
+                }
+
+                $amount = 0;
+                $percentage = 0;
+                $shouldApply = false;
+
+                if ($deduction->scope === 'all') {
+                    $shouldApply = true;
+                    if ($deduction->type === 'fixed') {
+                        $amount = $deduction->amount;
+                    } elseif ($deduction->type === 'percentage') {
+                        $percentage = $deduction->percentage;
+                    }
+                } elseif ($deduction->scope === 'position') {
+                    $pivot = $deduction->positions->where('id', $e->position_id)->first();
+                    if ($pivot) {
+                        $shouldApply = true;
+                        if ($deduction->type === 'fixed') {
+                            $amount = $pivot->pivot->amount;
+                        } elseif ($deduction->type === 'percentage') {
+                            $percentage = $pivot->pivot->percentage;
+                        }
+                    }
+                } elseif ($deduction->scope === 'employee') {
+                    $pivot = $deduction->employees->where('id', $e->id)->first();
+                    if ($pivot) {
+                        $shouldApply = true;
+                        if ($deduction->type === 'fixed') {
+                            $amount = $pivot->pivot->amount;
+                        } elseif ($deduction->type === 'percentage') {
+                            $percentage = $pivot->pivot->percentage;
+                        }
+                    }
+                }
+
+                if ($shouldApply) {
+                    // Calculate Amount if Percentage
+                    if ($deduction->type === 'percentage' && $percentage > 0) {
+                         $basicPay = $numDays * $dailyRate;
+                         $amount = $basicPay * ($percentage / 100);
+                    }
+    
+                    if ($amount > 0) {
+                        EmployeeDeduction::create([
+                            'payroll_item_id' => $payrollItem->id,
+                            'description' => $deduction->description,
+                            'amount' => $amount
+                        ]);
+                    }
+                }
+            }
+
             EmployeeDeduction::create([
                 'payroll_item_id' => $payrollItem->id,
                 'description' => "Tardiness {$tHour}h, {$tMins}m",
                 'amount' => $tAmount
             ]);
+
+            if ($holidayPay > 0) {
+                EmployeeAllowance::create([
+                    'payroll_item_id' => $payrollItem->id,
+                    'description' => "Holiday Pay",
+                    'amount' => $holidayPay
+                ]);
+            }
         }   
 
-        return redirect()->route('page.payroll.view', $payroll->id)->with('status', 'Payroll for '.$department->name.' has been created.');
+        return redirect()->route('payroll.view', $payroll->id)->with('status', 'Payroll for '.$department->name.' has been created.');
     }
 
     public function view($id) 
@@ -217,40 +374,156 @@ class PayrollController extends Controller
     }
 
     // Allowances
-    public function allowances()
+        public function allowances()
     {
-        $allowances = Allowance::all();
-        return view('payroll.allowances.index', compact('allowances'));
+        $allowances = Allowance::with(['positions', 'employees'])->get();
+        $positions = Position::all();
+        $employees = Employee::orderBy('lastname')->get();
+        return view('payroll.allowances.index', compact('allowances', 'positions', 'employees'));
     }
 
-    public function saveAllowance(Request $request)
+    public function saveAllowance(Request $request) 
     {
         $request->validate([
             'description' => [
                 'required', 'string', 'min:3', 'unique:allowances,description'
-            ]
+            ],
+            'type' => ['required', 'in:fixed,percentage'],
+            'scope' => ['required', 'in:all,position,employee'],
+            'amount' => [
+                'nullable', 
+                Rule::requiredIf(fn() => $request->type === 'fixed' && $request->scope === 'all'),
+                'numeric', 'min:0'
+            ],
+            'percentage' => [
+                'nullable', 
+                Rule::requiredIf(fn() => $request->type === 'percentage' && $request->scope === 'all'),
+                'numeric', 'between:0,100'
+            ],
+            'schedule' => ['required', 'in:every_payroll,specific_month'],
+            'target_month' => ['nullable', 'required_if:schedule,specific_month', 'integer', 'between:1,12']
         ]);
 
-        Allowance::create([
-            'description' => $request->description
+        $allowance = Allowance::create([
+            'description' => $request->description,
+            'type' => $request->type,
+            'scope' => $request->scope,
+            'amount' => ($request->scope == 'all' && $request->type == 'fixed') ? $request->amount : null,
+            'percentage' => ($request->scope == 'all' && $request->type == 'percentage') ? $request->percentage : null,
+            'schedule' => $request->schedule,
+            'target_month' => ($request->schedule == 'specific_month') ? $request->target_month : null,
         ]);
+
+        if ($request->scope === 'position' && $request->has('position_amounts')) {
+            $syncData = [];
+            foreach ($request->position_amounts as $id => $val) {
+                if ($val > 0) {
+                    $data = [];
+                    if ($request->type == 'fixed') {
+                        $data['amount'] = $val;
+                    } else {
+                        $data['percentage'] = $val;
+                        $data['amount'] = 0;
+                    }
+                    $syncData[$id] = $data;
+                }
+            }
+            $allowance->positions()->sync($syncData);
+        } elseif ($request->scope === 'employee' && $request->has('employee_amounts')) {
+            $syncData = [];
+            foreach ($request->employee_amounts as $id => $val) {
+                if ($val > 0) {
+                    $data = [];
+                    if ($request->type == 'fixed') {
+                        $data['amount'] = $val;
+                    } else {
+                        $data['percentage'] = $val;
+                        $data['amount'] = 0;
+                    }
+                    $syncData[$id] = $data;
+                }
+            }
+            $allowance->employees()->sync($syncData);
+        }
 
         return redirect()->route('payroll.allowances')->with('status', 'Saved.');
     }
 
-    public function updateAllowance(Request $request, $id)
+    public function updateAllowance(Request $request, $id) 
     {
         $request->validate([
             'description' => [
-                'required', 'string', 'min:3', 
+                'required', 'string', 'min:3',
                 Rule::unique('allowances', 'description')->ignore($id)
-            ]
+            ],
+            'type' => ['required', 'in:fixed,percentage'],
+            'scope' => ['required', 'in:all,position,employee'],
+            'amount' => [
+                'nullable', 
+                Rule::requiredIf(fn() => $request->type === 'fixed' && $request->scope === 'all'),
+                'numeric', 'min:0'
+            ],
+            'percentage' => [
+                'nullable', 
+                Rule::requiredIf(fn() => $request->type === 'percentage' && $request->scope === 'all'),
+                'numeric', 'between:0,100'
+            ],
+            'schedule' => ['required', 'in:every_payroll,specific_month'],
+            'target_month' => ['nullable', 'required_if:schedule,specific_month', 'integer', 'between:1,12']
         ]);
 
         $allowance = Allowance::find($id);
         $allowance->update([
-            'description' => $request->description
+            'description' => $request->description,
+            'type' => $request->type,
+            'scope' => $request->scope,
+            'amount' => ($request->scope == 'all' && $request->type == 'fixed') ? $request->amount : null,
+            'percentage' => ($request->scope == 'all' && $request->type == 'percentage') ? $request->percentage : null,
+            'schedule' => $request->schedule,
+            'target_month' => ($request->schedule == 'specific_month') ? $request->target_month : null,
         ]);
+
+        if ($request->scope === 'position') {
+            if ($request->has('position_amounts')) {
+                $syncData = [];
+                foreach ($request->position_amounts as $pid => $val) {
+                    if ($val > 0) {
+                        $data = [];
+                        if ($request->type == 'fixed') {
+                            $data['amount'] = $val;
+                        } else {
+                            $data['percentage'] = $val;
+                            $data['amount'] = 0;
+                        }
+                        $syncData[$pid] = $data;
+                    }
+                }
+                $allowance->positions()->sync($syncData);
+            }
+        } else {
+            $allowance->positions()->detach();
+        }
+
+        if ($request->scope === 'employee') {
+            if ($request->has('employee_amounts')) {
+                $syncData = [];
+                foreach ($request->employee_amounts as $eid => $val) {
+                    if ($val > 0) {
+                        $data = [];
+                        if ($request->type == 'fixed') {
+                            $data['amount'] = $val;
+                        } else {
+                            $data['percentage'] = $val;
+                            $data['amount'] = 0;
+                        }
+                        $syncData[$eid] = $data;
+                    }
+                }
+                $allowance->employees()->sync($syncData);
+            }
+        } else {
+            $allowance->employees()->detach();
+        }
 
         return redirect()->route('payroll.allowances')->with('status', 'Updated.');
     }
@@ -265,38 +538,154 @@ class PayrollController extends Controller
     // Deduction
     public function deductions()
     {
-        $deductions = Deduction::all();
-        return view('payroll.deductions.index', compact('deductions'));
+        $deductions = Deduction::with(['positions', 'employees'])->get();
+        $positions = Position::all();
+        $employees = Employee::orderBy('lastname')->get();
+        return view('payroll.deductions.index', compact('deductions', 'positions', 'employees'));
     }
 
-    public function saveDeduction(Request $request)
+    public function saveDeduction(Request $request) 
     {
         $request->validate([
             'description' => [
                 'required', 'string', 'min:3', 'unique:deductions,description'
-            ]
+            ],
+            'type' => ['required', 'in:fixed,percentage'],
+            'scope' => ['required', 'in:all,position,employee'],
+            'amount' => [
+                'nullable', 
+                Rule::requiredIf(fn() => $request->type === 'fixed' && $request->scope === 'all'),
+                'numeric', 'min:0'
+            ],
+            'percentage' => [
+                'nullable', 
+                Rule::requiredIf(fn() => $request->type === 'percentage' && $request->scope === 'all'),
+                'numeric', 'between:0,100'
+            ],
+            'schedule' => ['required', 'in:every_payroll,specific_month'],
+            'target_month' => ['nullable', 'required_if:schedule,specific_month', 'integer', 'between:1,12']
         ]);
 
-        Deduction::create([
-            'description' => $request->description
+        $deduction = Deduction::create([
+            'description' => $request->description,
+            'type' => $request->type,
+            'scope' => $request->scope,
+            'amount' => ($request->scope == 'all' && $request->type == 'fixed') ? $request->amount : null,
+            'percentage' => ($request->scope == 'all' && $request->type == 'percentage') ? $request->percentage : null,
+            'schedule' => $request->schedule,
+            'target_month' => ($request->schedule == 'specific_month') ? $request->target_month : null,
         ]);
+
+        if ($request->scope === 'position' && $request->has('position_amounts')) {
+            $syncData = [];
+            foreach ($request->position_amounts as $id => $val) {
+                if ($val > 0) {
+                    $data = [];
+                    if ($request->type == 'fixed') {
+                        $data['amount'] = $val;
+                    } else {
+                        $data['percentage'] = $val;
+                        $data['amount'] = 0;
+                    }
+                    $syncData[$id] = $data;
+                }
+            }
+            $deduction->positions()->sync($syncData);
+        } elseif ($request->scope === 'employee' && $request->has('employee_amounts')) {
+            $syncData = [];
+            foreach ($request->employee_amounts as $id => $val) {
+                if ($val > 0) {
+                    $data = [];
+                    if ($request->type == 'fixed') {
+                        $data['amount'] = $val;
+                    } else {
+                        $data['percentage'] = $val;
+                        $data['amount'] = 0;
+                    }
+                    $syncData[$id] = $data;
+                }
+            }
+            $deduction->employees()->sync($syncData);
+        }
 
         return redirect()->route('payroll.deductions')->with('status', 'Saved.');
     }
 
-    public function updateDeduction(Request $request, $id)
+    public function updateDeduction(Request $request, $id) 
     {
         $request->validate([
             'description' => [
-                'required', 'string', 'min:3', 
+                'required', 'string', 'min:3',
                 Rule::unique('deductions', 'description')->ignore($id)
-            ]
+            ],
+            'type' => ['required', 'in:fixed,percentage'],
+            'scope' => ['required', 'in:all,position,employee'],
+            'amount' => [
+                'nullable', 
+                Rule::requiredIf(fn() => $request->type === 'fixed' && $request->scope === 'all'),
+                'numeric', 'min:0'
+            ],
+            'percentage' => [
+                'nullable', 
+                Rule::requiredIf(fn() => $request->type === 'percentage' && $request->scope === 'all'),
+                'numeric', 'between:0,100'
+            ],
+            'schedule' => ['required', 'in:every_payroll,specific_month'],
+            'target_month' => ['nullable', 'required_if:schedule,specific_month', 'integer', 'between:1,12']
         ]);
 
         $deduction = Deduction::find($id);
         $deduction->update([
-            'description' => $request->description
+            'description' => $request->description,
+            'type' => $request->type,
+            'scope' => $request->scope,
+            'amount' => ($request->scope == 'all' && $request->type == 'fixed') ? $request->amount : null,
+            'percentage' => ($request->scope == 'all' && $request->type == 'percentage') ? $request->percentage : null,
+            'schedule' => $request->schedule,
+            'target_month' => ($request->schedule == 'specific_month') ? $request->target_month : null,
         ]);
+
+        if ($request->scope === 'position') {
+            if ($request->has('position_amounts')) {
+                $syncData = [];
+                foreach ($request->position_amounts as $pid => $val) {
+                    if ($val > 0) {
+                        $data = [];
+                        if ($request->type == 'fixed') {
+                            $data['amount'] = $val;
+                        } else {
+                            $data['percentage'] = $val;
+                            $data['amount'] = 0;
+                        }
+                        $syncData[$pid] = $data;
+                    }
+                }
+                $deduction->positions()->sync($syncData);
+            }
+        } else {
+            $deduction->positions()->detach();
+        }
+
+        if ($request->scope === 'employee') {
+            if ($request->has('employee_amounts')) {
+                $syncData = [];
+                foreach ($request->employee_amounts as $eid => $val) {
+                    if ($val > 0) {
+                        $data = [];
+                        if ($request->type == 'fixed') {
+                            $data['amount'] = $val;
+                        } else {
+                            $data['percentage'] = $val;
+                            $data['amount'] = 0;
+                        }
+                        $syncData[$eid] = $data;
+                    }
+                }
+                $deduction->employees()->sync($syncData);
+            }
+        } else {
+            $deduction->employees()->detach();
+        }
 
         return redirect()->route('payroll.deductions')->with('status', 'Updated.');
     }
@@ -342,6 +731,204 @@ class PayrollController extends Controller
             .$payroll->department->name.'-'
             .$payroll->date_from.'--'.$payroll->date_to.'.pdf'
         );
+    }
+
+    public function regeneratePayroll(Request $request, $id)
+    {
+        $payroll = Payroll::findOrFail($id);
+        
+        // Delete all existing payroll items (cascades to allowances and deductions)
+        PayrollItem::where('payroll_id', $payroll->id)->delete();
+        
+        $from = $payroll->date_from;
+        $to = $payroll->date_to;
+        $department = Department::find($payroll->department_id);
+        
+        $allAllowances = Allowance::with(['positions', 'employees'])->get();
+        $allDeductions = Deduction::with(['positions', 'employees'])->get();
+
+        foreach ($department->employees as $e) {
+
+            $numDays = $e->numberOfDutyDays($from, $to);
+            $overtime = $e->overtime($from, $to);
+            $tardiness = $e->tardiness($from, $to);
+            $dailyRate = $e->daily_rate;
+            $overtime_pay = $overtime * $e->minutely_rate; 
+
+            // Calculate Holiday Pay
+            $holidays = Holiday::whereBetween('date', [$from, $to])->get()->keyBy('date');
+            $holidayShifts = Shift::where('is_holiday', true)->get()->keyBy('name');
+            $logs = $e->dtrRange($from, $to);
+            $holidayPay = 0;
+            
+            foreach ($logs as $log) {
+                if ($holidays->has($log->log_date)) {
+                    $holiday = $holidays[$log->log_date];
+                    // Find corresponding shift for the holiday type
+                    $shiftRate = 100;
+                    if ($holidayShifts->has($holiday->type)) {
+                        $shiftRate = $holidayShifts[$holiday->type]->rate_percentage;
+                    }
+                    
+                    if ($shiftRate > 100) {
+                        // Extra pay = DailyRate * ((Rate% - 100) / 100)
+                        $extraPercentage = ($shiftRate - 100) / 100;
+                        $holidayPay += $dailyRate * $extraPercentage;
+                    }
+                }
+            }
+
+            $gross = ($numDays * $dailyRate) + $overtime_pay + $holidayPay;
+
+            $tHour = floor($tardiness['grandTotal'] / 60);
+            $tMins = $tardiness['grandTotal'] % 60;
+            $tAmount = $tardiness['grandTotal'] * $e->minutely_rate;
+            
+
+            $payrollItem = PayrollItem::create([
+                'payroll_id' => $payroll->id,
+                'employee_id' => $e->id,
+                'num_of_days' => $numDays,
+                'daily_rate' => $e->daily_rate,
+                'overtime' => $overtime,
+                'overtime_pay' => $overtime_pay,
+                'gross_pay' => $gross,
+                'net_pay' => $gross
+            ]);
+
+            // Auto-add Allowances
+            foreach ($allAllowances as $allowance) {
+                // Check Schedule
+                $payrollMonth = \Carbon\Carbon::parse($to)->month;
+                if ($allowance->schedule === 'specific_month' && $allowance->target_month != $payrollMonth) {
+                    continue;
+                }
+
+                $amount = 0;
+                $percentage = 0;
+                $shouldApply = false;
+
+                if ($allowance->scope === 'all') {
+                    $shouldApply = true;
+                    if ($allowance->type === 'fixed') {
+                        $amount = $allowance->amount;
+                    } elseif ($allowance->type === 'percentage') {
+                        $percentage = $allowance->percentage;
+                    }
+                } elseif ($allowance->scope === 'position') {
+                    $pivot = $allowance->positions->where('id', $e->position_id)->first();
+                    if ($pivot) {
+                        $shouldApply = true;
+                        if ($allowance->type === 'fixed') {
+                            $amount = $pivot->pivot->amount;
+                        } elseif ($allowance->type === 'percentage') {
+                            $percentage = $pivot->pivot->percentage;
+                        }
+                    }
+                } elseif ($allowance->scope === 'employee') {
+                    $pivot = $allowance->employees->where('id', $e->id)->first();
+                    if ($pivot) {
+                        $shouldApply = true;
+                        if ($allowance->type === 'fixed') {
+                            $amount = $pivot->pivot->amount;
+                        } elseif ($allowance->type === 'percentage') {
+                            $percentage = $pivot->pivot->percentage;
+                        }
+                    }
+                }
+
+                if ($shouldApply) {
+                    // Calculate Amount if Percentage
+                    if ($allowance->type === 'percentage' && $percentage > 0) {
+                         $basicPay = $numDays * $dailyRate;
+                         $amount = $basicPay * ($percentage / 100);
+                    }
+    
+                    if ($amount > 0) {
+                        EmployeeAllowance::create([
+                            'payroll_item_id' => $payrollItem->id,
+                            'description' => $allowance->description,
+                            'amount' => $amount
+                        ]);
+                    }
+                }
+            }
+
+            // Auto-add Deductions
+            foreach ($allDeductions as $deduction) {
+                // Check Schedule
+                $payrollMonth = \Carbon\Carbon::parse($to)->month;
+                if ($deduction->schedule === 'specific_month' && $deduction->target_month != $payrollMonth) {
+                    continue;
+                }
+
+                $amount = 0;
+                $percentage = 0;
+                $shouldApply = false;
+
+                if ($deduction->scope === 'all') {
+                    $shouldApply = true;
+                    if ($deduction->type === 'fixed') {
+                        $amount = $deduction->amount;
+                    } elseif ($deduction->type === 'percentage') {
+                        $percentage = $deduction->percentage;
+                    }
+                } elseif ($deduction->scope === 'position') {
+                    $pivot = $deduction->positions->where('id', $e->position_id)->first();
+                    if ($pivot) {
+                        $shouldApply = true;
+                        if ($deduction->type === 'fixed') {
+                            $amount = $pivot->pivot->amount;
+                        } elseif ($deduction->type === 'percentage') {
+                            $percentage = $pivot->pivot->percentage;
+                        }
+                    }
+                } elseif ($deduction->scope === 'employee') {
+                    $pivot = $deduction->employees->where('id', $e->id)->first();
+                    if ($pivot) {
+                        $shouldApply = true;
+                        if ($deduction->type === 'fixed') {
+                            $amount = $pivot->pivot->amount;
+                        } elseif ($deduction->type === 'percentage') {
+                            $percentage = $pivot->pivot->percentage;
+                        }
+                    }
+                }
+
+                if ($shouldApply) {
+                    // Calculate Amount if Percentage
+                    if ($deduction->type === 'percentage' && $percentage > 0) {
+                         $basicPay = $numDays * $dailyRate;
+                         $amount = $basicPay * ($percentage / 100);
+                    }
+    
+                    if ($amount > 0) {
+                        EmployeeDeduction::create([
+                            'payroll_item_id' => $payrollItem->id,
+                            'description' => $deduction->description,
+                            'amount' => $amount
+                        ]);
+                    }
+                }
+            }
+
+            EmployeeDeduction::create([
+                'payroll_item_id' => $payrollItem->id,
+                'description' => "Tardiness {$tHour}h, {$tMins}m",
+                'amount' => $tAmount
+            ]);
+
+            if ($holidayPay > 0) {
+                EmployeeAllowance::create([
+                    'payroll_item_id' => $payrollItem->id,
+                    'description' => "Holiday Pay",
+                    'amount' => $holidayPay
+                ]);
+            }
+        }   
+
+        return redirect()->route('payroll.view', $payroll->id)
+            ->with('status', 'Payroll regenerated successfully based on current DTR data.');
     }
 
 }

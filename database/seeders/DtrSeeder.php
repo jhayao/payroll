@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use App\Models\Employee;
+use Carbon\Carbon;
 
 class DtrSeeder extends Seeder
 {
@@ -14,19 +16,68 @@ class DtrSeeder extends Seeder
     {
         DB::table('dtr')->delete();
 
-        DB::table('dtr')->insert([
-            ['id' => 11, 'employee_id' => 1761536897, 'log_date' => '2025-12-03', 'am_in' => '2025-12-03 09:10:00', 'am_out' => '2025-12-03 12:20:00', 'pm_in' => '2025-12-03 13:46:00', 'pm_out' => '2025-12-03 17:21:00', 'ot_in' => null, 'ot_out' => null],
-            ['id' => 12, 'employee_id' => 1761536897, 'log_date' => '2025-12-04', 'am_in' => '2025-12-04 10:01:00', 'am_out' => '2025-12-04 12:03:00', 'pm_in' => '2025-12-04 13:04:00', 'pm_out' => '2025-12-04 17:04:00', 'ot_in' => null, 'ot_out' => null],
-            ['id' => 13, 'employee_id' => 1761536897, 'log_date' => '2025-12-05', 'am_in' => '2025-12-05 08:04:00', 'am_out' => '2025-12-05 11:05:00', 'pm_in' => '2025-12-05 12:16:00', 'pm_out' => '2025-12-05 16:56:00', 'ot_in' => null, 'ot_out' => null],
-            ['id' => 14, 'employee_id' => 1761536897, 'log_date' => '2025-12-06', 'am_in' => '2025-12-06 08:49:00', 'am_out' => '2025-12-06 11:49:00', 'pm_in' => '2025-12-06 13:50:00', 'pm_out' => '2025-12-06 17:51:08', 'ot_in' => '2025-12-06 18:00:00', 'ot_out' => '2025-12-06 18:54:00'],
-            ['id' => 15, 'employee_id' => 1761536897, 'log_date' => '2025-12-08', 'am_in' => '2025-12-08 07:49:00', 'am_out' => '2025-12-08 12:00:00', 'pm_in' => '2025-12-08 13:00:00', 'pm_out' => '2025-12-08 16:51:16', 'ot_in' => '2025-12-08 17:20:00', 'ot_out' => '2025-12-08 18:53:00'],
-            ['id' => 16, 'employee_id' => 1761536897, 'log_date' => '2025-12-09', 'am_in' => '2025-12-09 06:49:00', 'am_out' => '2025-12-09 11:50:00', 'pm_in' => '2025-12-09 12:50:00', 'pm_out' => '2025-12-09 17:01:28', 'ot_in' => '2025-12-09 17:30:00', 'ot_out' => '2025-12-09 18:52:00'],
-            ['id' => 22, 'employee_id' => 1761536897, 'log_date' => '2025-12-20', 'am_in' => '2025-12-20 14:19:00', 'am_out' => null, 'pm_in' => null, 'pm_out' => null, 'ot_in' => null, 'ot_out' => null],
-            ['id' => 23, 'employee_id' => 1766291621, 'log_date' => '2025-12-21', 'am_in' => null, 'am_out' => null, 'pm_in' => '2025-12-21 12:52:00', 'pm_out' => '2025-12-21 17:17:00', 'ot_in' => null, 'ot_out' => null],
-            ['id' => 24, 'employee_id' => 1766294697, 'log_date' => '2025-12-21', 'am_in' => null, 'am_out' => null, 'pm_in' => '2025-12-21 13:42:00', 'pm_out' => '2025-12-21 17:17:00', 'ot_in' => null, 'ot_out' => null],
-            ['id' => 25, 'employee_id' => 1761536897, 'log_date' => '2025-12-21', 'am_in' => null, 'am_out' => null, 'pm_in' => null, 'pm_out' => null, 'ot_in' => '2025-12-21 18:45:00', 'ot_out' => null],
-            ['id' => 26, 'employee_id' => 1766291621, 'log_date' => '2025-12-22', 'am_in' => null, 'am_out' => null, 'pm_in' => '2025-12-22 13:36:00', 'pm_out' => null, 'ot_in' => null, 'ot_out' => null],
-            ['id' => 27, 'employee_id' => 1766291621, 'log_date' => '2026-01-06', 'am_in' => null, 'am_out' => null, 'pm_in' => null, 'pm_out' => null, 'ot_in' => '2026-01-06 19:23:00', 'ot_out' => '2026-01-06 21:05:00'],
-        ]);
+        $employees = Employee::all();
+        $startDate = Carbon::parse('2026-01-01');
+        $endDate = Carbon::parse('2026-01-09');
+        
+        $id = 1;
+        
+        foreach ($employees as $employee) {
+            $currentDate = $startDate->copy();
+            
+            while ($currentDate->lte($endDate)) {
+                // Skip Sundays
+                if ($currentDate->dayOfWeek === Carbon::SUNDAY) {
+                    $currentDate->addDay();
+                    continue;
+                }
+                
+                $dateString = $currentDate->toDateString();
+                
+                // Get the employee's shift times
+                $shift = $employee->currentShift()?->shift;
+                
+                if (!$shift) {
+                    $currentDate->addDay();
+                    continue;
+                }
+                
+                // Generate realistic time variations (±5-15 minutes)
+                $amInVariation = rand(-5, 15);
+                $amOutVariation = rand(-5, 5);
+                $pmInVariation = rand(-5, 10);
+                $pmOutVariation = rand(-10, 5);
+                
+                // Parse shift times and add variations
+                $amIn = Carbon::parse($dateString . ' ' . $shift->am_in)->addMinutes($amInVariation);
+                $amOut = Carbon::parse($dateString . ' ' . $shift->am_out)->addMinutes($amOutVariation);
+                $pmIn = Carbon::parse($dateString . ' ' . $shift->pm_in)->addMinutes($pmInVariation);
+                $pmOut = Carbon::parse($dateString . ' ' . $shift->pm_out)->addMinutes($pmOutVariation);
+                
+                // Randomly add overtime (20% chance)
+                $otIn = null;
+                $otOut = null;
+                if (rand(1, 100) <= 20) {
+                    $otIn = $pmOut->copy()->addMinutes(rand(30, 60));
+                    $otOut = $otIn->copy()->addMinutes(rand(60, 180)); // 1-3 hours OT
+                }
+                
+                DB::table('dtr')->insert([
+                    'id' => $id++,
+                    'employee_id' => $employee->id,
+                    'log_date' => $dateString,
+                    'am_in' => $amIn->format('Y-m-d H:i:s'),
+                    'am_out' => $amOut->format('Y-m-d H:i:s'),
+                    'pm_in' => $pmIn->format('Y-m-d H:i:s'),
+                    'pm_out' => $pmOut->format('Y-m-d H:i:s'),
+                    'ot_in' => $otIn?->format('Y-m-d H:i:s'),
+                    'ot_out' => $otOut?->format('Y-m-d H:i:s'),
+                ]);
+                
+                $currentDate->addDay();
+            }
+        }
+        
+        $this->command->info('DTR records seeded for all employees from Jan 1-9, 2026');
     }
 }

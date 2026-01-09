@@ -72,6 +72,28 @@ Route::middleware(['auth', 'role:admin,hr'])->group(function() {
             Route::delete('{id}/delete', 'deleteShift')->name('shifts.delete');
         });
     });
+
+    // Projects
+    Route::get('projects', [AdminController::class, 'projects'])->name('projects');
+    Route::prefix('projects/')->group(function () {
+        Route::controller(AdminController::class)->group(function() {
+            Route::get('add', 'addProject')->name('projects.add');
+            Route::post('add', 'saveProject')->name('projects.save');
+            Route::get('{id}', 'viewProject')->name('projects.view');
+            Route::get('{id}/edit', 'editProject')->name('projects.edit');
+            Route::post('{id}/update', 'updateProject')->name('projects.update');
+            Route::delete('{id}/delete', 'deleteProject')->name('projects.delete');
+            Route::post('{id}/assign-employee', 'assignEmployee')->name('projects.assign-employee');
+            Route::delete('{id}/remove-employee/{employee_id}', 'removeEmployee')->name('projects.remove-employee');
+        });
+    });
+
+    // Calendar
+    Route::controller(\App\Http\Controllers\CalendarController::class)->prefix('calendar')->group(function() {
+       Route::get('/', 'index')->name('calendar.index'); 
+       Route::post('store', 'store')->name('calendar.store');
+       Route::post('destroy', 'destroy')->name('calendar.destroy');
+    });
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function() {
@@ -121,6 +143,7 @@ Route::middleware(['auth', 'role:admin,accounting'])->group(function() {
 
             Route::post('generate/report', 'generatePayrollReport')->name('payroll.generate-report');
             Route::post('generate/payslip', 'generatePayslipReport')->name('payroll.generate-payslip');
+            Route::post('{id}/regenerate', 'regeneratePayroll')->name('payroll.regenerate');
         });
     });
 

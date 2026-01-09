@@ -9,7 +9,20 @@ class Allowance extends Model
     public $timestamps = false;
     protected $table = 'allowances';
     protected $fillable = [
-        'description'
+        'description', 'type', 'scope', 'amount', 'percentage', 'schedule', 'target_month'
     ];
+
+    public function positions()
+    {
+        return $this->belongsToMany(Position::class, 'allowance_position')
+            ->withPivot(['amount', 'percentage'])
+            ->withTimestamps();
+    }
+
+    public function employees()
+    {
+        return $this->belongsToMany(Employee::class, 'allowance_employee')
+            ->withPivot(['amount', 'percentage']);
+    }
 
 }

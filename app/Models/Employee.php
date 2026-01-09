@@ -32,7 +32,12 @@ class Employee extends Authenticatable
         'password',
         'remember_token',
         'photo_2x2',
-        'photo_lg'
+        'photo_lg',
+        'purok',
+        'barangay',
+        'city',
+        'employee_id',
+        'custom_daily_rate'
     ];
 
     protected $hidden = [
@@ -66,26 +71,39 @@ class Employee extends Authenticatable
         $officialAmOut = $this->parseShift($log->log_date, $shift->am_out);
         $officialPmIn = $this->parseShift($log->log_date, $shift->pm_in);
         $officialPmOut = $this->parseShift($log->log_date, $shift->pm_out);
-        $logAmIn = Carbon::parse($log->am_in);
-        $logAmOut = Carbon::parse($log->am_out);
-        $logPmIn = Carbon::parse($log->pm_in);
-        $logPmOut = Carbon::parse($log->pm_out);
 
         $tardiness = 0;
-        if ($logAmIn && $logAmIn->greaterThan($officialAmIn)) {
-            $tardiness += $officialAmIn->diffInMinutes($logAmIn);
+
+        // Only check AM In tardiness if am_in is actually logged
+        if ($log->am_in) {
+            $logAmIn = Carbon::parse($log->am_in);
+            if ($logAmIn->greaterThan($officialAmIn)) {
+                $tardiness += $officialAmIn->diffInMinutes($logAmIn);
+            }
         }
 
-        if ($logAmOut && $logAmOut->lessThan($officialAmOut)) {
-            $tardiness += $logAmOut->diffInMinutes($officialAmOut);
+        // Only check AM Out undertime if am_out is actually logged
+        if ($log->am_out) {
+            $logAmOut = Carbon::parse($log->am_out);
+            if ($logAmOut->lessThan($officialAmOut)) {
+                $tardiness += $logAmOut->diffInMinutes($officialAmOut);
+            }
         }
 
-        if ($logPmIn && $logPmIn->greaterThan($officialPmIn)) {
-            $tardiness += $officialPmIn->diffInMinutes($logPmIn);
+        // Only check PM In tardiness if pm_in is actually logged
+        if ($log->pm_in) {
+            $logPmIn = Carbon::parse($log->pm_in);
+            if ($logPmIn->greaterThan($officialPmIn)) {
+                $tardiness += $officialPmIn->diffInMinutes($logPmIn);
+            }
         }
 
-        if ($logPmOut && $logPmOut->lessThan($officialPmOut)) {
-            $tardiness += $logPmOut->diffInMinutes($officialPmOut);
+        // Only check PM Out undertime if pm_out is actually logged
+        if ($log->pm_out) {
+            $logPmOut = Carbon::parse($log->pm_out);
+            if ($logPmOut->lessThan($officialPmOut)) {
+                $tardiness += $logPmOut->diffInMinutes($officialPmOut);
+            }
         }
 
         return [
@@ -93,6 +111,7 @@ class Employee extends Authenticatable
             'hour' => floor($tardiness / 60),
             'minutes' => $tardiness % 60
         ];
+
 
     }
 
@@ -230,6 +249,28 @@ class Employee extends Authenticatable
         ]);
     }
 
+    public function allowances()
+    {
+        return $this->belongsToMany(Allowance::class, 'allowance_employee')->withPivot('amount', 'percentage');
+    }
+
+    public function deductions()
+    {
+        return $this->belongsToMany(Deduction::class, 'deduction_employee')->withPivot('amount', 'percentage');
+    }
+
+    public function projects()
+    {
+        return $this->belongsToMany(Project::class, 'employee_project')
+            ->withPivot('assigned_at')
+            ->withTimestamps();
+    }
+
+    public function managedProjects()
+    {
+        return $this->hasMany(Project::class, 'time_keeper_id');
+    }
+
     public function getFullNameAttribute()
     {
         $fullname = trim("{$this->lastname}, {$this->firstname} {$this->middlename}");
@@ -244,6 +285,26 @@ class Employee extends Authenticatable
     public function sendPasswordResetNotification($token)
     {
         $this->notify(new EmployeeResetPassword($token));
+    }
+
+    public function getDailyRateAttribute()
+    {
+        return $this->custom_daily_rate ?? $this->position->daily_rate;
+    }
+
+    public function getHourlyRateAttribute()
+    {
+        return $this->daily_rate / 8;
+    }
+
+    public function getMinutelyRateAttribute()
+    {
+        return $this->hourly_rate / 60;
+    }
+
+    public function getFormattedDailyRateAttribute()
+    {
+        return '₱ ' . number_format($this->daily_rate, 2);
     }
 
 }
