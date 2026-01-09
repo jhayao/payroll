@@ -858,7 +858,7 @@ class AdminController extends Controller
 
         $project = Project::findOrFail($id);
         
-        if ($project->employees()->where('employee_id', $request->employee_id)->exists()) {
+        if ($project->employees()->where('employee_project.employee_id', $request->employee_id)->exists()) {
             return back()->with('error', 'Employee is already assigned to this project.');
         }
 
