@@ -24,6 +24,7 @@ class ShiftSeeder extends Seeder
                 'pm_out' => '17:00',
                 'in_out_interval' => 60,
                 'out_in_interval' => 10,
+                'rate_percentage' => 100,
             ],
             [
                 'id' => 5,
@@ -34,6 +35,7 @@ class ShiftSeeder extends Seeder
                 'pm_out' => '05:00',
                 'in_out_interval' => 0,
                 'out_in_interval' => 0,
+                'rate_percentage' => 130,
             ],
         ]);
     }
