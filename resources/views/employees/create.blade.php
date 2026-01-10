@@ -106,9 +106,9 @@
 
                                     const filtered = allPositions.filter(opt => {
                                         const deptId = opt.getAttribute('data-department-id');
-                                        // Show if no department linked (global) or matches selected department
-                                        // If data-department-id is empty strings, it handles nulls from DB
-                                        return !deptId || deptId === selectedDeptId;
+                                        // Strict filter: Only show if deptId matches selectedDeptId
+                                        // Use loose equality (==) to match "1" with 1, and "" with null/empty
+                                        return deptId == selectedDeptId;
                                     });
 
                                     filtered.forEach(opt => {

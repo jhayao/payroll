@@ -171,7 +171,7 @@
 
                                                         const filtered = allPositions.filter(opt => {
                                                             const deptId = opt.getAttribute('data-department-id');
-                                                            return !deptId || deptId == selectedDeptId; // Loose equality for potential string/int mismatch
+                                                            return deptId == selectedDeptId; 
                                                         });
 
                                                         filtered.forEach(opt => {
