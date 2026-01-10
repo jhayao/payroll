@@ -357,6 +357,13 @@ class AdminController extends Controller
         return redirect()->route('employees.view', $shift->employee_id)->with('status', 'Official time updated.');
     }
 
+    public function deleteEmployee(Request $request, $id)
+    {
+        $employee = Employee::findOrFail($id);
+        $employee->delete();
+        return back()->with('success', 'Employee deleted successfully.');
+    }
+
     // Departments
     public function departments()
     {

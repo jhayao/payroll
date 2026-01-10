@@ -18,8 +18,7 @@
 
                             <div class="grid lg:grid-cols-3 xl:grid-cols-4 gap-2">
 
-                                <x-input name="employee_id" label="Employee ID" value="{{ $employee->employee_id }}"
-                                    :readonly="true" />
+                                <x-input name="id" label="ID" value="{{ $employee->id }}" :readonly="true" />
 
                                 <x-input name="lastname" label="Last Name"
                                     value="{{ old('lastname', $employee->lastname) }}" :readonly="true" />

@@ -35,6 +35,7 @@ Route::middleware(['auth', 'role:admin,hr'])->group(function() {
         Route::post('{id}/update-photos', [AdminController::class, 'updatePhotos'])->name('employees.update-photo');
         Route::post('{id}/update-password', [AdminController::class, 'updatePassword'])->name('employees.update-password');
         Route::post('shift/{id}/update', [AdminController::class, 'updateEmployeeShift'])->name('employees.update-shift');
+        Route::delete('{id}/delete', [AdminController::class, 'deleteEmployee'])->name('employees.delete');
     });
 
     // Departments

@@ -43,7 +43,7 @@
                                                 <x-input 
                                                     name="employee_id"
                                                     label="Employee ID"
-                                                    value="{{ $employee->employee_id }}"
+                                                    value="{{ $employee->id }}"
                                                     :readonly="true"
                                                 />
 
