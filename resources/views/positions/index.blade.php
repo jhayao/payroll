@@ -18,6 +18,9 @@
                                     <span class="flex items-center">Position</span>
                                 </th>
                                 <th>
+                                    <span class="flex items-center">Department</span>
+                                </th>
+                                <th>
                                     <span class="text-end">Daily Rate</span>
                                 </th>
                                 <th>
@@ -36,6 +39,7 @@
                             @foreach ($positions as $e)
                                 <tr class="border-t">
                                     <td>{{ $e->description }}</td>
+                                    <td>{{ $e->department ? $e->department->name : '-' }}</td>
                                     <td>{{ $e->formatted_daily_rate }}</td>
                                     <td>{{ $e->formatted_hourly_rate }}</td>
                                     <td>{{ $e->formatted_minutely_rate }}</td>

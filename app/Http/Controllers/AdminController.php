@@ -56,7 +56,7 @@ class AdminController extends Controller
 
     public function createEmployee()
     {
-        $positions = Position::pluck('description', 'id');
+        $positions = Position::all();
         $departments = Department::pluck('name', 'id');
         return view('employees.create', compact('positions', 'departments'));
     }
@@ -221,7 +221,7 @@ class AdminController extends Controller
     public function viewEmployee(int $id) 
     {
         $employee = Employee::findOrFail($id);
-        $positions = Position::pluck('description', 'id');
+        $positions = Position::all();
         $departments = Department::pluck('name', 'id');
         $shifts = Shift::all();
         return view('employees.view', compact('employee', 'positions', 'departments', 'shifts'));
@@ -425,13 +425,14 @@ class AdminController extends Controller
     // Positions
     public function positions()
     {
-        $positions = Position::withCount('employees')->get();
+        $positions = Position::with(['department'])->withCount('employees')->get();
         return view('positions.index', compact('positions'));
     }
 
     public function addPosition() 
     {
-        return view('positions.create');
+        $departments = Department::pluck('name', 'id');
+        return view('positions.create', compact('departments'));
     }
 
     public function savePosition(Request $request) 
@@ -439,6 +440,7 @@ class AdminController extends Controller
         $request->validate([
             'description' => ['required', 'min:2', 'unique:positions,description'],
             'daily_rate' => ['required', 'numeric'],
+            'department_id' => ['nullable', 'exists:departments,id'],
         ], [
             'daily_rate.required' => 'The daily rate is riquired.', 
             'daily_rate.numeric' => 'The daily rate must be numeric.',
@@ -451,7 +453,8 @@ class AdminController extends Controller
             'description' => $request->description,
             'daily_rate' => $request->daily_rate,
             'hourly_rate' => $hourly_rate,
-            'minutely_rate' => $minutely_rate
+            'minutely_rate' => $minutely_rate,
+            'department_id' => $request->department_id,
         ]);
 
         return redirect()->route('positions')->with('status', 'Position created successfully.');
@@ -460,7 +463,8 @@ class AdminController extends Controller
     public function editPosition($id) 
     {
         $position = Position::find($id);
-        return view('positions.edit', compact('position'));
+        $departments = Department::pluck('name', 'id');
+        return view('positions.edit', compact('position', 'departments'));
     }
 
     public function updatePosition(Request $request, $id) 
@@ -471,6 +475,7 @@ class AdminController extends Controller
                 Rule::unique('positions', 'description')->ignore($id)
             ],
             'daily_rate' => ['required', 'numeric'],
+            'department_id' => ['nullable', 'exists:departments,id'],
         ], [
             'daily_rate.required' => 'The daily rate is riquired.', 
             'daily_rate.numeric' => 'The daily rate must be numeric.',
@@ -484,7 +489,8 @@ class AdminController extends Controller
             'description' => $request->description,
             'daily_rate' => $request->daily_rate,
             'hourly_rate' => $hourly_rate,
-            'minutely_rate' => $minutely_rate
+            'minutely_rate' => $minutely_rate,
+            'department_id' => $request->department_id,
         ]);
 
         return redirect()->route('positions')->with('status', 'Position updated successfully.');

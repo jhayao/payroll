@@ -11,6 +11,7 @@ class Position extends Model
     protected $table = 'positions';
     protected $fillable = [
         'description',
+        'department_id',
         'daily_rate',
         'hourly_rate',
         'minutely_rate',
@@ -19,6 +20,11 @@ class Position extends Model
     public function employees()
     {
         return $this->hasMany(Employee::class, 'position_id');
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
     }
 
     public function getFormattedDailyRateAttribute()

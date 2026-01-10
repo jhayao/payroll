@@ -113,19 +113,33 @@
                                             </div>
 
                                             <div class="grid lg:grid-cols-3 xl:grid-cols-3 gap-2">
-                                                <x-select
-                                                    name="position"
-                                                    label="Position"
-                                                    value="{{ $employee->position_id }}"
-                                                    :options="$positions"
-                                                />
+                                                
+                                                <!-- Position Select (Swapped order intentionally or keeping layout? Original had Position first, let's keep grid layout but logic needs dept first for UX usually, but side-by-side matches) -->
+                                                <!-- Actually, Department filter affects Position, so usually Department comes first. The original layout had Position then Department.
+                                                     I will preserve the grid layout structure. The user sees them. I will implementing the filter regardless of order in DOM.
+                                                 -->
 
-                                                <x-select
-                                                    name="department"
-                                                    label="Department"
-                                                    value="{{ $employee->department_id }}"
-                                                    :options="$departments"
-                                                />
+                                                <div class="mb-6 md:mb-0">
+                                                    <label for="department" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Department</label>
+                                                    <select id="department" name="department" class="bg-gray-50 border text-sm rounded block w-full p-2 text-gray-900 focus:ring-blue-500 focus:border-blue-500 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                                        <option value="">Select Department</option>
+                                                        @foreach($departments as $id => $name)
+                                                            <option value="{{ $id }}" {{ $employee->department_id == $id ? 'selected' : '' }}>{{ $name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+
+                                                <div class="mb-6 md:mb-0">
+                                                    <label for="position" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Position</label>
+                                                    <select id="position" name="position" class="bg-gray-50 border text-sm rounded block w-full p-2 text-gray-900 focus:ring-blue-500 focus:border-blue-500 border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                                                        <option value="">Select Position</option>
+                                                        @foreach($positions as $position)
+                                                            <option value="{{ $position->id }}" data-department-id="{{ $position->department_id }}" {{ $employee->position_id == $position->id ? 'selected' : '' }}>
+                                                                {{ $position->description }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
 
                                                 <x-input
                                                     name="email"
@@ -141,6 +155,53 @@
                                                     notice="(Optional - Overrides Position Rate)"
                                                 />
                                             </div>
+
+                                            <script>
+                                                document.addEventListener('DOMContentLoaded', function() {
+                                                    const departmentSelect = document.getElementById('department');
+                                                    const positionSelect = document.getElementById('position');
+                                                    const allPositions = Array.from(positionSelect.querySelectorAll('option')).filter(opt => opt.value);
+
+                                                    function filterPositions() {
+                                                        const selectedDeptId = departmentSelect.value;
+                                                        const currentPositionId = positionSelect.value; // Store currently selected value
+
+                                                        // Clear current options except the placeholder
+                                                        positionSelect.innerHTML = '<option value="">Select Position</option>';
+
+                                                        const filtered = allPositions.filter(opt => {
+                                                            const deptId = opt.getAttribute('data-department-id');
+                                                            return !deptId || deptId == selectedDeptId; // Loose equality for potential string/int mismatch
+                                                        });
+
+                                                        filtered.forEach(opt => {
+                                                            positionSelect.appendChild(opt);
+                                                        });
+
+                                                        // Restore selection if it's still valid in the filtered list
+                                                        // Note: We need to check if the currentPositionId exists in the filtered options.
+                                                        // If it doesn't, we might not want to select anything, or keep it blank.
+                                                        // BUT: On initial load, we want to keep the employee's existing position even if the department logic is weird (though data should be consistent).
+                                                        // However, if the user changes department, we probably want to reset position if it doesn't match.
+                                                        
+                                                        const exists = filtered.some(opt => opt.value == currentPositionId);
+                                                        if (exists) {
+                                                            positionSelect.value = currentPositionId;
+                                                        } else {
+                                                            positionSelect.value = "";
+                                                        }
+                                                    }
+
+                                                    departmentSelect.addEventListener('change', filterPositions);
+                                                    
+                                                    // Trigger on load to filter relevant positions for the current department
+                                                    // IMPORTANT: We must ensure we don't clear the key value on initial load.
+                                                    // The 'selected' attribute in HTML handles the initial value.
+                                                    // However, our script rebuilds the options.
+                                                    // So we need to capture the value BEFORE filtering, which we do with `currentPositionId`.
+                                                    filterPositions();
+                                                });
+                                            </script>
 
 
 
