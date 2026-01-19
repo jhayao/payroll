@@ -54,6 +54,11 @@
                                 <input type="hidden" name="payroll_id" value="{{ $payroll->id }}" />
                                 <x-primary-button>Generate Payslips</x-primary-button>
                             </form>
+                            <form action="{{ route('payroll.generate-summary') }}" method="post" target="_blank">
+                                @csrf
+                                <input type="hidden" name="payroll_id" value="{{ $payroll->id }}" />
+                                <x-primary-button>Generate Summary</x-primary-button>
+                            </form>
                         </div>
 
                     </div>
@@ -95,11 +100,11 @@
                             </thead>
                             <tbody>
 
-                                @php $count = 1; @endphp
+                                {{-- @php $count = 1; @endphp --}}
 
                                 @foreach ($payroll->items as $e)
                                     <tr>
-                                        <td class="text-end">{{ $count }}.</td>
+                                        <td class="text-end">{{ $loop->iteration }}.</td>
                                         <td>{{ $e->employee->full_name }}</td>
                                         <td class="text-end">{{ $e->num_of_days }}</td>
                                         <td class="text-end">{{ number_format($e->daily_rate, 2) }}</td>

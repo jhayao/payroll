@@ -144,6 +144,7 @@ Route::middleware(['auth', 'role:admin,accounting'])->group(function() {
 
             Route::post('generate/report', 'generatePayrollReport')->name('payroll.generate-report');
             Route::post('generate/payslip', 'generatePayslipReport')->name('payroll.generate-payslip');
+            Route::post('generate/summary', 'generateSummaryReport')->name('payroll.generate-summary');
             Route::post('{id}/regenerate', 'regeneratePayroll')->name('payroll.regenerate');
         });
     });

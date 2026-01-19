@@ -13,6 +13,8 @@ use App\Models\EmployeeAllowance;
 use App\Models\Position;
 use App\Models\Holiday;
 use App\Models\Shift;
+use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -775,6 +777,82 @@ class PayrollController extends Controller
             .$payroll->department->name.'-'
             .$payroll->date_from.'--'.$payroll->date_to.'.pdf'
         );
+    }
+
+    public function generateSummaryReport(Request $request)
+    {
+        $payroll = Payroll::findOrFail($request->payroll_id);
+        $department = Department::find($payroll->department_id);
+        
+        $from = Carbon::parse($payroll->date_from);
+        $to = Carbon::parse($payroll->date_to);
+        $dates = CarbonPeriod::create($from, $to);
+
+        $data = [];
+
+        // Iterate through payroll items to ensure we include employees actually in this payroll
+        foreach ($payroll->items as $item) {
+            $e = $item->employee;
+            $logs = $e->dtrRange($from->format('Y-m-d'), $to->format('Y-m-d'))->keyBy('log_date');
+            
+            $row = [
+                'name' => $e->full_name,
+                'position' => $e->position->description,
+                'days' => [],
+                'total_days' => 0,
+                'total_ot' => 0,
+                'total_undertime' => 0
+            ];
+
+            foreach ($dates as $date) {
+                $dateStr = $date->format('Y-m-d');
+                $val = 0;
+                
+                if ($logs->has($dateStr)) {
+                    $log = $logs[$dateStr];
+                    
+                    // Simple logic: AM session + PM session
+                    // If am_in & am_out exists -> 0.5
+                    // If pm_in & pm_out exists -> 0.5
+                    
+                    if ($log->am_in && $log->am_out) {
+                        $val += 0.5;
+                    }
+                    if ($log->pm_in && $log->pm_out) {
+                        $val += 0.5;
+                    }
+                    
+                    // Fallback: if they have DTR but incomplete/weird logs, maybe just count as 1 if present? 
+                    // But user specifically asked for "summary of dates like this" showing 0.5.
+                    // If val is still 0 but log exists (e.g. forgot to time out), what to do?
+                    // For now, strict pairing seems safer for "0.5".
+                    
+                    // Calculate Daily OT (minutes)
+                    $ot = $e->dailyOvertime($log);
+                    $row['total_ot'] += $ot;
+                    
+                    // Calculate Daily Undertime (minutes)
+                    $tardiness = $e->dailyTardiness($log)['tardiness'];
+                    $row['total_undertime'] += $tardiness;
+                }
+                
+                $row['days'][$dateStr] = $val;
+                $row['total_days'] += $val;
+            }
+            
+            $data[] = $row;
+        }
+
+        $options = new Options();
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('isRemoteEnabled', true);
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml(view('payroll.report.summary', compact('payroll', 'dates', 'data'))->render());
+        $dompdf->setPaper('folio', 'landscape');
+        $dompdf->render();
+
+        return $dompdf->stream('summary-' . $payroll->department->name . '.pdf');
     }
 
     public function regeneratePayroll(Request $request, $id)

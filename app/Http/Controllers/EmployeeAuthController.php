@@ -83,6 +83,13 @@ class EmployeeAuthController extends Controller
             ]);
         }
 
+        // 3. Check if employee is assigned to a project (Not Laid Off)
+        if (! $user->projects()->exists()) {
+            return back()->withErrors([
+                'email' => 'Login failed. Status: Laid Off (No Active Project Assignment).',
+            ]);
+        }
+
         Auth::guard('employee')->login($user, $request->boolean('remember'));   
         $request->session()->regenerate();
         return redirect()->route('employee.home');
