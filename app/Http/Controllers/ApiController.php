@@ -115,4 +115,22 @@ class ApiController extends Controller
         ]);
 
     }
+
+    public function getEmployees()
+    {
+        $employees = Employee::all()->map(function ($e) {
+            return [
+                'id' => $e->id,
+                'name' => $e->full_name,
+                'photo_url' => $e->photo_2x2 ? asset($e->photo_2x2) : null,
+                'face_photos' => [
+                    $e->photo_lg ? asset($e->photo_lg) : null,
+                    $e->photo_lg2 ? asset($e->photo_lg2) : null,
+                    $e->photo_lg3 ? asset($e->photo_lg3) : null,
+                ],
+            ];
+        });
+
+        return response()->json($employees);
+    }
 }
