@@ -89,6 +89,11 @@
 
                             <x-input name="custom_daily_rate" label="Custom Daily Rate"
                                 value="{{ old('custom_daily_rate') }}" notice="(Optional - Overrides Position Rate)" />
+
+                            <x-select name="salary_type" label="Salary Type" wrapperClass="col-span-2 mb-6 md:mb-0" :options="[
+        'weekly' => 'Weekly',
+        'semi_monthly' => 'Semi-monthly'
+    ]" />
                         </div>
 
                         <script>

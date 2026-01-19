@@ -154,6 +154,16 @@
                                                     value="{{ old('custom_daily_rate', $employee->custom_daily_rate) }}"
                                                     notice="(Optional - Overrides Position Rate)"
                                                 />
+
+                                                <x-select 
+                                                    name="salary_type"
+                                                    label="Salary Type"
+                                                    value="{{ $employee->salary_type }}"
+                                                    :options="[
+                                                        'weekly' => 'Weekly',
+                                                        'semi_monthly' => 'Semi-monthly'
+                                                    ]"
+                                                />
                                             </div>
 
                                             <script>

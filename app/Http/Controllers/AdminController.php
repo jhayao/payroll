@@ -100,6 +100,7 @@ class AdminController extends Controller
             ],
             'password' => ['nullable', Rules\Password::defaults()], // Made nullable
             'custom_daily_rate' => ['nullable', 'numeric', 'min:0'],
+            'salary_type' => ['nullable', 'in:weekly,semi_monthly'],
             'photo' => ['required', 'image', 'mimes:jpeg,png,jpg|max:2048'],
             'photo2' => ['required', 'image', 'mimes:jpeg,png,jpg|max:2048'],
             'photo3' => ['required', 'image', 'mimes:jpeg,png,jpg|max:2048'],
@@ -157,6 +158,7 @@ class AdminController extends Controller
         $employee->position_id = $request->position;
         $employee->department_id = $request->department;
         $employee->custom_daily_rate = !empty($request->custom_daily_rate) ? $request->custom_daily_rate : null;
+        $employee->salary_type = $request->salary_type;
 
         $photo1 = $this->uploadPhoto($request, $employee->id, 'photo');
         $employee->photo_lg = $photo1;
@@ -257,6 +259,7 @@ class AdminController extends Controller
                 Rule::unique(Employee::class)->ignore($id)
             ],
             'custom_daily_rate' => ['nullable', 'numeric'],
+            'salary_type' => ['nullable', 'in:weekly,semi_monthly'],
         ], [
             'mobile_no.regex' => 'Contact number must start with 09 or +639 followed by 9 digits.',
             'mobile_no.unique' => 'Contact number is already exist.'
@@ -812,7 +815,7 @@ class AdminController extends Controller
             'name' => ['required', 'string', 'min:3', 'unique:projects,name'],
             'description' => ['nullable', 'string'],
             'status' => ['required', 'in:active,completed,on_hold'],
-            'time_keeper_id' => ['nullable', 'exists:employees,id'],
+            'time_keeper_id' => ['nullable', 'exists:employees,id', 'unique:projects,time_keeper_id'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
@@ -845,7 +848,7 @@ class AdminController extends Controller
             'name' => ['required', 'string', 'min:3', Rule::unique('projects', 'name')->ignore($id)],
             'description' => ['nullable', 'string'],
             'status' => ['required', 'in:active,completed,on_hold'],
-            'time_keeper_id' => ['nullable', 'exists:employees,id'],
+            'time_keeper_id' => ['nullable', 'exists:employees,id', Rule::unique('projects', 'time_keeper_id')->ignore($id)],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
@@ -866,20 +869,21 @@ class AdminController extends Controller
     public function assignEmployee(Request $request, $id)
     {
         $request->validate([
-            'employee_id' => ['required', 'exists:employees,id'],
+            'employee_ids' => ['required', 'array'],
+            'employee_ids.*' => ['exists:employees,id'],
         ]);
 
         $project = Project::findOrFail($id);
         
-        if ($project->employees()->where('employee_project.employee_id', $request->employee_id)->exists()) {
-            return back()->with('error', 'Employee is already assigned to this project.');
+        $count = 0;
+        foreach ($request->employee_ids as $employee_id) {
+             if (!$project->employees()->where('employee_project.employee_id', $employee_id)->exists()) {
+                $project->employees()->attach($employee_id, ['assigned_at' => now()]);
+                $count++;
+             }
         }
 
-        $project->employees()->attach($request->employee_id, [
-            'assigned_at' => now()
-        ]);
-
-        return back()->with('status', 'Employee assigned successfully!');
+        return back()->with('status', $count . ' employee(s) assigned successfully!');
     }
 
     public function removeEmployee(Request $request, $id, $employee_id)

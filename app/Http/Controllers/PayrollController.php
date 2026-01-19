@@ -34,49 +34,97 @@ class PayrollController extends Controller
     public function create()
     {
         $departments = Department::pluck('name', 'id');
-        return view('payroll.create', compact('departments'));
+        // Fetch employees with department_id for JS filtering
+        $employees = Employee::select('id', 'department_id', 'lastname', 'firstname', 'middlename', 'salary_type')->orderBy('lastname')->get()->map(function($e) {
+            $e->fullname = $e->lastname . ', ' . $e->firstname;
+            return $e;
+        });
+        
+        return view('payroll.create', compact('departments', 'employees'));
     }
 
     public function save(Request $request)
     {
         $request->validate([
             'date_from' => ['required', 'date'],
-            'date_to' => ['required', 'date', 'after_or_equal:date_from']
+            'date_to' => ['required', 'date', 'after_or_equal:date_from'],
+            'generation_type' => ['required', 'in:all,individual'],
+            'employee_id' => ['nullable', 'required_if:generation_type,individual', 'exists:employees,id'],
+            'department' => ['required', 'exists:departments,id'],
+            'salary_type' => ['nullable', 'in:weekly,semi_monthly'],
         ], [
             'date_from.required' => 'This is required.',
             'date_from.date' => 'This must be a valid date.',
             'date_to.required' => 'This is required.',
             'date_to.date' => 'This must be a valid date.',
             'date_to.after_or_equal' => 'This must after or equal to date from.',
+            'employee_id.required_if' => 'Please select an employee for individual generation.',
         ]);
 
-        $payrollExists = Payroll::where('department_id', $request->department)
-                          ->where('date_from', $request->date_from)
-                          ->where('date_to', $request->date_to)
-                          ->exists();
+        $payroll = Payroll::where('department_id', $request->department)
+            ->whereDate('date_from', $request->date_from)
+            ->whereDate('date_to', $request->date_to)
+            ->first();
 
-        if ($payrollExists) {
-            throw ValidationException::withMessages([
-                'department' => 'A payroll record for this department and date range already exists.'
+        if (!$payroll) {
+            $payroll = Payroll::create([
+                'department_id' => $request->department,
+                'date_from' => $request->date_from,
+                'date_to' => $request->date_to
             ]);
         }
 
-        $payroll = Payroll::create([
-            'department_id' => $request->department,
-            'date_from' => $request->date_from,
-            'date_to' => $request->date_to
-        ]);
-
-        $from = $request->date_from;
-        $to = $request->date_to;
-
-        $department = Department::find($request->department);
+        if ($request->generation_type === 'all') {
+             // Logic continued below...
+        }
 
         $allAllowances = Allowance::with(['positions', 'employees'])->get();
         $allDeductions = Deduction::with(['positions', 'employees'])->get();
+        // Pre-fetch commonly used data
+        $holidays = Holiday::whereBetween('date', [$request->date_from, $request->date_to])->get()->keyBy('date');
+        $holidayShifts = Shift::where('is_holiday', true)->get()->keyBy('name');
 
-        foreach ($department->employees as $e) {
+        $employeesToProcess = [];
+        
+        if ($request->generation_type === 'individual') {
+            $employee = Employee::find($request->employee_id);
+            if ($employee->department_id != $request->department) {
+                 throw ValidationException::withMessages(['employee_id' => 'Employee does not belong to the selected department.']);
+            }
+            $employeesToProcess[] = $employee;
+        } else {
+            $query = Employee::where('department_id', $request->department);
+            
+            if ($request->salary_type) {
+                $query->where('salary_type', $request->salary_type);
+            }
+            
+            $employeesToProcess = $query->get();
+        }
 
+
+        $itemCount = 0;
+
+        foreach ($employeesToProcess as $e) {
+            // Check if item exists
+            if (PayrollItem::where('payroll_id', $payroll->id)->where('employee_id', $e->id)->exists()) {
+                continue; 
+            }
+
+            $this->calculatePayrollItem($payroll, $e, $request->date_from, $request->date_to, $allAllowances, $allDeductions, $holidays, $holidayShifts);
+            $itemCount++;
+        }   
+
+        if ($itemCount == 0 && count($employeesToProcess) > 0) {
+             // Maybe duplicates prevented any creation
+             return redirect()->route('payroll.view', $payroll->id)->with('status', 'Payroll accessed. No new items created (already existing).');
+        }
+
+        return redirect()->route('payroll.view', $payroll->id)->with('status', 'Payroll updated successfully.');
+    }
+
+    private function calculatePayrollItem($payroll, $e, $from, $to, $allAllowances, $allDeductions, $holidays, $holidayShifts)
+    {
             $numDays = $e->numberOfDutyDays($from, $to);
             $overtime = $e->overtime($from, $to);
             $tardiness = $e->tardiness($from, $to);
@@ -84,8 +132,6 @@ class PayrollController extends Controller
             $overtime_pay = $overtime * $e->minutely_rate; 
 
             // Calculate Holiday Pay
-            $holidays = Holiday::whereBetween('date', [$from, $to])->get()->keyBy('date');
-            $holidayShifts = Shift::where('is_holiday', true)->get()->keyBy('name');
             $logs = $e->dtrRange($from, $to);
             $holidayPay = 0;
             
@@ -112,7 +158,6 @@ class PayrollController extends Controller
             $tMins = $tardiness['grandTotal'] % 60;
             $tAmount = $tardiness['grandTotal'] * $e->minutely_rate;
             
-
             $payrollItem = PayrollItem::create([
                 'payroll_id' => $payroll->id,
                 'employee_id' => $e->id,
@@ -120,11 +165,12 @@ class PayrollController extends Controller
                 'daily_rate' => $e->daily_rate,
                 'overtime' => $overtime,
                 'overtime_pay' => $overtime_pay,
+                'undertime_minutes' => $tardiness['grandTotal'],
+                'undertime_amount' => $tAmount,
                 'gross_pay' => $gross,
-                'net_pay' => $gross
+                'net_pay' => $gross - $tAmount
             ]);
 
-            // Auto-add Allowances
             // Auto-add Allowances
             foreach ($allAllowances as $allowance) {
                 // Check Schedule
@@ -254,9 +300,6 @@ class PayrollController extends Controller
                     'amount' => $holidayPay
                 ]);
             }
-        }   
-
-        return redirect()->route('payroll.view', $payroll->id)->with('status', 'Payroll for '.$department->name.' has been created.');
     }
 
     public function view($id) 
@@ -723,7 +766,8 @@ class PayrollController extends Controller
         $options->set('defaultFont', 'DejaVu Sans');
 
         $dompdf = new Dompdf($options);
-        $dompdf->loadHtml(view('payroll.report.payslips', compact('payroll'))->render());
+        $preparedBy = auth()->user();
+        $dompdf->loadHtml(view('payroll.report.payslips', compact('payroll', 'preparedBy'))->render());
         $dompdf->setPaper('folio', 'portrait');
         $dompdf->render();
 

@@ -14,20 +14,67 @@ class PositionSeeder extends Seeder
     {
         DB::table('positions')->delete();
 
-        DB::table('positions')->insert([
-            ['id' => 1, 'description' => 'Office Engineer', 'daily_rate' => 900, 'hourly_rate' => 112.5, 'minutely_rate' => 1.87],
-            ['id' => 5, 'description' => 'Purchasing Manager', 'daily_rate' => 900, 'hourly_rate' => 112.5, 'minutely_rate' => 1.87],
-            ['id' => 6, 'description' => 'Bidding Manager', 'daily_rate' => 500, 'hourly_rate' => 62.5, 'minutely_rate' => 1.04],
-            ['id' => 7, 'description' => 'Accounting', 'daily_rate' => 500, 'hourly_rate' => 62.5, 'minutely_rate' => 1.04],
-            ['id' => 8, 'description' => 'HR', 'daily_rate' => 1000, 'hourly_rate' => 125, 'minutely_rate' => 2.08],
-            ['id' => 10, 'description' => 'Labor', 'daily_rate' => 475, 'hourly_rate' => 59.37, 'minutely_rate' => 0.98],
-            ['id' => 11, 'description' => 'Skilled Worker', 'daily_rate' => 500, 'hourly_rate' => 62.5, 'minutely_rate' => 1.04],
-            ['id' => 12, 'description' => 'Foreman', 'daily_rate' => 650, 'hourly_rate' => 81.25, 'minutely_rate' => 1.35],
-            ['id' => 13, 'description' => 'Leadman', 'daily_rate' => 650, 'hourly_rate' => 81.25, 'minutely_rate' => 1.35],
-            ['id' => 14, 'description' => 'Time Keeper', 'daily_rate' => 500, 'hourly_rate' => 62.5, 'minutely_rate' => 1.04],
-            ['id' => 15, 'description' => 'Project Incharge', 'daily_rate' => 675, 'hourly_rate' => 84.37, 'minutely_rate' => 1.4],
-            ['id' => 17, 'description' => 'Chief Engineer', 'daily_rate' => 1250, 'hourly_rate' => 156.25, 'minutely_rate' => 2.6],
-            ['id' => 18, 'description' => 'Driver', 'daily_rate' => 500, 'hourly_rate' => 62.5, 'minutely_rate' => 1.04],
-        ]);
+        $positions = [
+            // Accounting (Dept 2)
+            ['department_id' => 2, 'description' => 'Accounting Head', 'daily_rate' => 1000],
+            ['department_id' => 2, 'description' => 'Accounting 1', 'daily_rate' => 600],
+            ['department_id' => 2, 'description' => 'Accounting 2', 'daily_rate' => 600],
+
+            // HR (Dept 3)
+            ['department_id' => 3, 'description' => 'Hr Head', 'daily_rate' => 1000],
+            ['department_id' => 3, 'description' => 'Hr 1', 'daily_rate' => 600],
+
+            // Bid (Dept 4)
+            ['department_id' => 4, 'description' => 'Bidding Engineer', 'daily_rate' => 800],
+            ['department_id' => 4, 'description' => 'Bidding Staff 1', 'daily_rate' => 600],
+            ['department_id' => 4, 'description' => 'Bidding Staff 2', 'daily_rate' => 600],
+
+            // Purchasing (Dept 5)
+            ['department_id' => 5, 'description' => 'Purchasing Head', 'daily_rate' => 1000],
+            ['department_id' => 5, 'description' => 'Purchasing Staff 1', 'daily_rate' => 600],
+            ['department_id' => 5, 'description' => 'Purchasing Staff 2', 'daily_rate' => 600],
+
+            // Engineering (Dept 6)
+            ['department_id' => 6, 'description' => 'Chief Engineer', 'daily_rate' => 1250],
+            ['department_id' => 6, 'description' => 'Residents Engineer', 'daily_rate' => 1000],
+            ['department_id' => 6, 'description' => 'Office Engineer', 'daily_rate' => 900],
+            ['department_id' => 6, 'description' => 'Project Incharge', 'daily_rate' => 700],
+            ['department_id' => 6, 'description' => 'Panday Mason', 'daily_rate' => 550],
+            ['department_id' => 6, 'description' => 'Foreman', 'daily_rate' => 650],
+            ['department_id' => 6, 'description' => 'Leadman', 'daily_rate' => 600],
+            ['department_id' => 6, 'description' => 'Labor', 'daily_rate' => 475],
+            ['department_id' => 6, 'description' => 'Skilled Worker', 'daily_rate' => 500],
+            ['department_id' => 6, 'description' => 'Timekeeper', 'daily_rate' => 500],
+            ['department_id' => 6, 'description' => 'Senior Driver', 'daily_rate' => 600],
+            ['department_id' => 6, 'description' => 'Mini Dump Truck Driver', 'daily_rate' => 550],
+            ['department_id' => 6, 'description' => 'Dump Truck Driver', 'daily_rate' => 550],
+            ['department_id' => 6, 'description' => 'Flat Bed Truck Driver', 'daily_rate' => 550],
+            ['department_id' => 6, 'description' => 'Excavator Driver', 'daily_rate' => 600],
+            ['department_id' => 6, 'description' => 'Bulldozer Driver', 'daily_rate' => 600],
+            ['department_id' => 6, 'description' => 'Front Loader Driver', 'daily_rate' => 600],
+            ['department_id' => 6, 'description' => 'Crane Driver', 'daily_rate' => 650],
+            ['department_id' => 6, 'description' => 'Concrete Mixer Driver', 'daily_rate' => 550],
+            ['department_id' => 6, 'description' => 'Road Roller Driver', 'daily_rate' => 600],
+
+            // Top Management (Dept 7)
+            ['department_id' => 7, 'description' => 'Admin', 'daily_rate' => 800],
+        ];
+
+        // Process data to calculate rates and timestamp
+        $data = [];
+        $now = now();
+        foreach ($positions as $pos) {
+            $hourly = $pos['daily_rate'] / 8;
+            $minutely = $hourly / 60;
+
+            $data[] = array_merge($pos, [
+                'hourly_rate' => $hourly,
+                'minutely_rate' => $minutely,
+                // 'created_at' => $now, // If timestamps were enabled, but simple DB insert might not need it if default CURRENT_TIMESTAMP exists, or if model handles it. Seeder uses DB::table which doesn't auto-timestamp unless specified.
+                // Assuming schema has defaults or nullable. Migration 2025_01_01_... creates positions.
+            ]);
+        }
+
+        DB::table('positions')->insert($data);
     }
 }

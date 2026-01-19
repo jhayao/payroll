@@ -13,7 +13,7 @@ use App\Notifications\EmployeeResetPassword;
 
 class Employee extends Authenticatable
 {
-    use Notifiable;
+    use Notifiable, \Illuminate\Database\Eloquent\Factories\HasFactory;
     
     public $timestamps = false;
     protected $table = 'employees';
@@ -37,7 +37,8 @@ class Employee extends Authenticatable
         'barangay',
         'city',
         'employee_id',
-        'custom_daily_rate'
+        'custom_daily_rate',
+        'salary_type'
     ];
 
     protected $hidden = [

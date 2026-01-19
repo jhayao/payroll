@@ -18,6 +18,8 @@ class PayrollItem extends Model
         'daily_rate',
         'overtime',
         'overtime_pay',
+        'undertime_minutes',
+        'undertime_amount',
         'gross_pay',
         'net_pay'
     ];
@@ -54,7 +56,7 @@ class PayrollItem extends Model
 
     public function netPay()
     {
-        return $this->gross_pay + $this->totalAllowance() - $this->totalDeduction();
+        return $this->gross_pay + $this->totalAllowance() - $this->totalDeduction() - $this->undertime_amount;
     }
 
     public function getFormattedTotalAllowanceAttribute()
