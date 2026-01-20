@@ -14,6 +14,8 @@ class PayrollItem extends Model
     protected $fillable = [
         'payroll_id',
         'employee_id',
+        'date_from',
+        'date_to',
         'num_of_days',
         'daily_rate',
         'overtime',
@@ -22,6 +24,11 @@ class PayrollItem extends Model
         'undertime_amount',
         'gross_pay',
         'net_pay'
+    ];
+
+    protected $casts = [
+        'date_from' => 'date',
+        'date_to' => 'date',
     ];
 
     public function payroll()

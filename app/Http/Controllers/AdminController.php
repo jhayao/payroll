@@ -143,7 +143,10 @@ class AdminController extends Controller
         // I will keep using time() for the primary key 'id' to result in minimal friction,
         // BUT I will save my new ID to 'employee_id' column.
         
-        $employee_id = time(); 
+        // Generate shorter 6-digit numeric ID
+        do {
+            $employee_id = mt_rand(100000, 999999);
+        } while (Employee::where('id', $employee_id)->exists()); 
 
         // Add employee_id to validated data
         $validated['employee_id'] = $employee_code;

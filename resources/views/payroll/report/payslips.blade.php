@@ -37,7 +37,13 @@
                             <table class="payslip-table">
                                 <!-- Info Section -->
                                 <tr>
-                                    <td colspan="2">DATE: {{ $payroll->date_from->format('M. d') }}-{{ $payroll->date_to->format('d, Y') }}</td>
+                                    <td colspan="2">DATE: 
+                                        @if($item->date_from && $item->date_to)
+                                            {{ $item->date_from->format('M. d') }}-{{ $item->date_to->format('d, Y') }}
+                                        @else
+                                            {{ $payroll->date_from->format('M. d') }}-{{ $payroll->date_to->format('d, Y') }}
+                                        @endif
+                                    </td>
                                     <td width="30%"></td>
                                 </tr>
                                 <tr>

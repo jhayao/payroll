@@ -113,8 +113,28 @@ class PayrollController extends Controller
                 continue; 
             }
 
-            $this->calculatePayrollItem($payroll, $e, $request->date_from, $request->date_to, $allAllowances, $allDeductions, $holidays, $holidayShifts);
-            $itemCount++;
+            // Splitting Logic for Semi-Monthly
+            $start = Carbon::parse($request->date_from);
+            $end = Carbon::parse($request->date_to);
+
+            // Check if full month (Start of Month to End of Month)
+            $isFullMonth = $start->copy()->startOfMonth()->equalTo($start) && $end->copy()->endOfMonth()->equalTo($end);
+
+            if ($e->salary_type === 'semi_monthly' && $isFullMonth) {
+                // Split 1: 1st to 15th
+                $firstHalfEnd = $start->copy()->day(15);
+                $this->calculatePayrollItem($payroll, $e, $start->format('Y-m-d'), $firstHalfEnd->format('Y-m-d'), $allAllowances, $allDeductions, $holidays, $holidayShifts);
+                $itemCount++;
+
+                // Split 2: 16th to End
+                $secondHalfStart = $start->copy()->day(16);
+                $this->calculatePayrollItem($payroll, $e, $secondHalfStart->format('Y-m-d'), $end->format('Y-m-d'), $allAllowances, $allDeductions, $holidays, $holidayShifts);
+                $itemCount++;
+            } else {
+                // Normal processing
+                $this->calculatePayrollItem($payroll, $e, $request->date_from, $request->date_to, $allAllowances, $allDeductions, $holidays, $holidayShifts);
+                $itemCount++;
+            }
         }   
 
         if ($itemCount == 0 && count($employeesToProcess) > 0) {
@@ -163,6 +183,8 @@ class PayrollController extends Controller
             $payrollItem = PayrollItem::create([
                 'payroll_id' => $payroll->id,
                 'employee_id' => $e->id,
+                'date_from' => $from,
+                'date_to' => $to,
                 'num_of_days' => $numDays,
                 'daily_rate' => $e->daily_rate,
                 'overtime' => $overtime,
