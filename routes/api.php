@@ -12,5 +12,10 @@ Route::controller(ApiController::class)->group(function () {
 
     Route::post('timekeeper-login', 'verifyTimekeeper');
     Route::get('employees', 'getEmployees');
+    
+    // Timekeeper Routes
+    Route::get('timekeeper/projects', 'getTimekeeperProjects');
+    Route::get('timekeeper/employees', 'getTimekeeperEmployees');
+    Route::get('timekeeper/attendance', 'getTimekeeperAttendance');
 
 });

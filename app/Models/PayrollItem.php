@@ -63,7 +63,7 @@ class PayrollItem extends Model
 
     public function netPay()
     {
-        return $this->gross_pay + $this->totalAllowance() - $this->totalDeduction() - $this->undertime_amount;
+        return $this->gross_pay + $this->totalAllowance() - $this->totalDeduction();
     }
 
     public function getFormattedTotalAllowanceAttribute()

@@ -324,6 +324,11 @@ class PayrollController extends Controller
                     'amount' => $holidayPay
                 ]);
             }
+
+            // Recalculate and update Net Pay in DB to match dynamic calculation
+            $payrollItem->update([
+                'net_pay' => $payrollItem->netPay()
+            ]);
     }
 
     public function view($id) 
@@ -1069,6 +1074,11 @@ class PayrollController extends Controller
                     'amount' => $holidayPay
                 ]);
             }
+
+            // Recalculate and update Net Pay in DB
+            $payrollItem->update([
+                'net_pay' => $payrollItem->netPay()
+            ]);
         }   
 
         return redirect()->route('payroll.view', $payroll->id)

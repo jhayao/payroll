@@ -121,7 +121,7 @@
                                 <tr class="net-pay-row">
                                     <td></td>
                                     <td class="text-center net-label">NET PAY:</td>
-                                    <td class="text-right">P{{ number_format($item->net_pay, 2) }}</td>
+                                    <td class="text-right">P{{ number_format($item->netPay(), 2) }}</td>
                                 </tr>
                             </table>
 

@@ -1,31 +1,32 @@
 <?php
 
-
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AccountingController;
-use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\EmployeeAuthController;
-
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\PayrollController;
 use App\Models\Employee;
+use Illuminate\Support\Facades\Route;
 
-Route::get('/', function() {
+Route::get('/', function () {
     return redirect()->route('login');
 });
 
 Route::get('/ir', function () {
     $employees = Employee::all();
+
     return view('face-portal', compact('employees'));
 });
 
-Route::middleware(['auth', 'role:admin,hr,accounting'])->group(function() {
+// API Documentation Page
+Route::view('/api/docs', 'api-docs');
+
+Route::middleware(['auth', 'role:admin,hr,accounting'])->group(function () {
     Route::get('dashboard', [AdminController::class, 'index'])->name('dashboard');
     Route::get('dtr', [AdminController::class, 'dtr'])->name('dtr');
     Route::post('dtr/generate-report', [AdminController::class, 'generateDTRReport'])->name('dtr.generate');
 });
 
-Route::middleware(['auth', 'role:admin,hr'])->group(function() {
+Route::middleware(['auth', 'role:admin,hr'])->group(function () {
     Route::get('employees', [AdminController::class, 'employees'])->name('employees');
     Route::prefix('employees/')->group(function () {
         Route::get('add', [AdminController::class, 'createEmployee'])->name('employees.add');
@@ -41,7 +42,7 @@ Route::middleware(['auth', 'role:admin,hr'])->group(function() {
     // Departments
     Route::get('departments', [AdminController::class, 'departments'])->name('departments');
     Route::prefix('departments/')->group(function () {
-        Route::controller(AdminController::class)->group(function() {
+        Route::controller(AdminController::class)->group(function () {
             Route::get('add', 'addDepartment')->name('departments.add');
             Route::post('add', 'saveDepartment')->name('departments.save');
             Route::get('{id}/edit', 'editDepartment')->name('departments.edit');
@@ -53,7 +54,7 @@ Route::middleware(['auth', 'role:admin,hr'])->group(function() {
     // Positions
     Route::get('positions', [AdminController::class, 'positions'])->name('positions');
     Route::prefix('positions/')->group(function () {
-        Route::controller(AdminController::class)->group(function() {
+        Route::controller(AdminController::class)->group(function () {
             Route::get('add', 'addPosition')->name('positions.add');
             Route::post('add', 'savePosition')->name('positions.save');
             Route::get('{id}/edit', 'editPosition')->name('positions.edit');
@@ -65,7 +66,7 @@ Route::middleware(['auth', 'role:admin,hr'])->group(function() {
     // Shifts
     Route::get('shifts', [AdminController::class, 'shifts'])->name('shifts');
     Route::prefix('shifts/')->group(function () {
-        Route::controller(AdminController::class)->group(function() {
+        Route::controller(AdminController::class)->group(function () {
             Route::get('add', 'addShift')->name('shifts.add');
             Route::post('add', 'saveShift')->name('shifts.save');
             Route::get('{id}/edit', 'editShift')->name('shifts.edit');
@@ -77,7 +78,7 @@ Route::middleware(['auth', 'role:admin,hr'])->group(function() {
     // Projects
     Route::get('projects', [AdminController::class, 'projects'])->name('projects');
     Route::prefix('projects/')->group(function () {
-        Route::controller(AdminController::class)->group(function() {
+        Route::controller(AdminController::class)->group(function () {
             Route::get('add', 'addProject')->name('projects.add');
             Route::post('add', 'saveProject')->name('projects.save');
             Route::get('{id}', 'viewProject')->name('projects.view');
@@ -90,18 +91,18 @@ Route::middleware(['auth', 'role:admin,hr'])->group(function() {
     });
 
     // Calendar
-    Route::controller(\App\Http\Controllers\CalendarController::class)->prefix('calendar')->group(function() {
-       Route::get('/', 'index')->name('calendar.index'); 
-       Route::post('store', 'store')->name('calendar.store');
-       Route::post('destroy', 'destroy')->name('calendar.destroy');
+    Route::controller(\App\Http\Controllers\CalendarController::class)->prefix('calendar')->group(function () {
+        Route::get('/', 'index')->name('calendar.index');
+        Route::post('store', 'store')->name('calendar.store');
+        Route::post('destroy', 'destroy')->name('calendar.destroy');
     });
 });
 
-Route::middleware(['auth', 'role:admin'])->group(function() {
+Route::middleware(['auth', 'role:admin'])->group(function () {
 
     Route::get('users', [AdminController::class, 'users'])->name('users');
     Route::prefix('users/')->group(function () {
-        Route::controller(AdminController::class)->group(function() {
+        Route::controller(AdminController::class)->group(function () {
             Route::post('save', 'saveUser')->name('users.save');
             Route::post('{id}/update', 'updateUser')->name('users.update');
         });
@@ -109,7 +110,7 @@ Route::middleware(['auth', 'role:admin'])->group(function() {
 
 });
 
-Route::middleware(['auth', 'role:admin,hr,accounting'])->group(function() {
+Route::middleware(['auth', 'role:admin,hr,accounting'])->group(function () {
 
     Route::get('profile', [AdminController::class, 'profile'])->name('profile');
     Route::post('profile/update', [AdminController::class, 'updateProfile'])->name('profile-update');
@@ -117,11 +118,11 @@ Route::middleware(['auth', 'role:admin,hr,accounting'])->group(function() {
 
 });
 
-Route::middleware(['auth', 'role:admin,accounting'])->group(function() {
+Route::middleware(['auth', 'role:admin,accounting'])->group(function () {
     // Payroll
     Route::get('payroll', [PayrollController::class, 'index'])->name('payroll');
     Route::prefix('payroll/')->group(function () {
-        Route::controller(PayrollController::class)->group(function() {
+        Route::controller(PayrollController::class)->group(function () {
             Route::get('create', 'create')->name('payroll.create');
             Route::post('create', 'save')->name('payroll.save');
             Route::get('{id}/view', 'view')->name('payroll.view');
@@ -157,7 +158,7 @@ Route::get('employee/forgot-password', [EmployeeAuthController::class, 'forgotPa
 Route::get('employee/reset-password/{token}', [EmployeeAuthController::class, 'resetPassword'])->name('employee.reset-password');
 Route::post('employee/save-reset-password', [EmployeeAuthController::class, 'saveResetPassword'])->name('employee.reset-password.save');
 Route::post('employee/email-password', [EmployeeAuthController::class, 'emailPassword'])->name('employee.email-password');
-Route::middleware('auth:employee')->group(function() {
+Route::middleware('auth:employee')->group(function () {
     Route::get('employee/home', [EmployeeController::class, 'index'])->name('employee.home');
     Route::get('employee/dtr', [EmployeeController::class, 'dtr'])->name('employee.dtr');
     Route::get('employee/profile', [EmployeeController::class, 'profile'])->name('employee.profile');
