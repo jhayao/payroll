@@ -818,7 +818,19 @@ class AdminController extends Controller
             'name' => ['required', 'string', 'min:3', 'unique:projects,name'],
             'description' => ['nullable', 'string'],
             'status' => ['required', 'in:active,completed,on_hold'],
-            'time_keeper_id' => ['nullable', 'exists:employees,id', 'unique:projects,time_keeper_id'],
+            'time_keeper_id' => [
+                'nullable', 
+                'exists:employees,id', 
+                function ($attribute, $value, $fail) {
+                    $exists = \App\Models\Project::where('time_keeper_id', $value)
+                        ->whereNotIn('status', ['completed', 'on_hold'])
+                        ->exists();
+                    
+                    if ($exists) {
+                        $fail('The selected Time Keeper is already assigned to another active project.');
+                    }
+                }
+            ],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
@@ -851,7 +863,20 @@ class AdminController extends Controller
             'name' => ['required', 'string', 'min:3', Rule::unique('projects', 'name')->ignore($id)],
             'description' => ['nullable', 'string'],
             'status' => ['required', 'in:active,completed,on_hold'],
-            'time_keeper_id' => ['nullable', 'exists:employees,id', Rule::unique('projects', 'time_keeper_id')->ignore($id)],
+            'time_keeper_id' => [
+                'nullable', 
+                'exists:employees,id', 
+                function ($attribute, $value, $fail) use ($id) {
+                    $exists = \App\Models\Project::where('time_keeper_id', $value)
+                        ->where('id', '!=', $id)
+                        ->whereNotIn('status', ['completed', 'on_hold'])
+                        ->exists();
+                    
+                    if ($exists) {
+                        $fail('The selected Time Keeper is already assigned to another active project.');
+                    }
+                }
+            ],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ]);
