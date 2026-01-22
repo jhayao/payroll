@@ -911,26 +911,28 @@ class PayrollController extends Controller
                 if ($logs->has($dateStr)) {
                     $log = $logs[$dateStr];
 
-                    // Simple logic: AM session + PM session
+                    // Logic: AM session (0.5) + PM session (0.5)
                     if ($log->am_in && $log->am_out) {
-                        $amVal = 1;
                         $val += 0.5;
                     }
                     if ($log->pm_in && $log->pm_out) {
-                        $pmVal = 1;
                         $val += 0.5;
                     }
 
-                    // Calculate Daily OT (minutes)
-                    $ot = $e->dailyOvertime($log);
-                    $row['total_ot'] += $ot;
+                    // Calculate Daily OT
+                    $otMinutes = $e->dailyOvertime($log);
+                    $row['total_ot'] += $otMinutes;
+
+                    if ($otMinutes > 0) {
+                        $otHours = round($otMinutes / 60, 2);
+                    }
 
                     // Calculate Daily Undertime (minutes)
                     $tardiness = $e->dailyTardiness($log)['tardiness'];
                     $row['total_undertime'] += $tardiness;
                 }
 
-                $row['days'][$dateStr] = ['am' => $amVal, 'pm' => $pmVal];
+                $row['days'][$dateStr] = ['attendance' => $val, 'ot' => $otHours];
                 $row['total_days'] += $val;
             }
 

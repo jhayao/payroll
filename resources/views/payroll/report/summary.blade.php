@@ -92,18 +92,18 @@
 
                     @foreach($dates as $date)
                         @php 
-                            $day = $row['days'][$date->format('Y-m-d')] ?? ['am' => 0, 'pm' => 0];
+                            $day = $row['days'][$date->format('Y-m-d')] ?? ['attendance' => 0, 'ot' => 0];
                         @endphp
 
-                        <td class="{{ $day['am'] > 0 ? 'active-cell' : '' }}">
-                            {{ $day['am'] == 1 ? '1' : '0' }}
+                        <td class="{{ $day['attendance'] > 0 ? 'active-cell' : '' }}">
+                            {{ number_format($day['attendance'], 1) }}
                         </td>
-                        <td class="{{ $day['pm'] > 0 ? 'active-cell' : '' }}">
-                                {{ $day['pm'] == 1 ? '1' : '0' }}
-                                </td>
+                        <td>
+                            {{ $day['ot'] > 0 ? $day['ot'] : '' }}
+                        </td>
                     @endforeach
                     <td class="bold">{{ $row['total_days'] }}</td>
-                    <td>{{ $row['total_ot'] }}</td>
+                    <td>{{ number_format($row['total_ot'] / 60, 2) }}</td>
                         <td>{{ $row['total_undertime'] }}</td>
                     </tr>
             @endforeach
