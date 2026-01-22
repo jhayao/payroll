@@ -15,7 +15,8 @@ class Payroll extends Model
         'department_id',
         'date_from',
         'date_to',
-        'status'
+        'status',
+        'salary_type'
     ];
 
     protected $casts = [

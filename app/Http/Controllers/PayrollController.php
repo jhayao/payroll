@@ -66,13 +66,15 @@ class PayrollController extends Controller
         $payroll = Payroll::where('department_id', $request->department)
             ->whereDate('date_from', $request->date_from)
             ->whereDate('date_to', $request->date_to)
+            ->where('salary_type', $request->salary_type) // Include salary type check
             ->first();
 
         if (!$payroll) {
             $payroll = Payroll::create([
                 'department_id' => $request->department,
                 'date_from' => $request->date_from,
-                'date_to' => $request->date_to
+                'date_to' => $request->date_to,
+                'salary_type' => $request->salary_type // Save salary type
             ]);
         }
 
@@ -896,8 +898,15 @@ class PayrollController extends Controller
         $allAllowances = Allowance::with(['positions', 'employees'])->get();
         $allDeductions = Deduction::with(['positions', 'employees'])->get();
 
-        foreach ($department->employees as $e) {
+        $query = Employee::where('department_id', $department->id);
 
+        if ($payroll->salary_type) {
+             $query->where('salary_type', $payroll->salary_type);
+        }
+        
+        $employees = $query->get();
+
+        foreach ($employees as $e) {
             $numDays = $e->numberOfDutyDays($from, $to);
             $overtime = $e->overtime($from, $to);
             $tardiness = $e->tardiness($from, $to);
