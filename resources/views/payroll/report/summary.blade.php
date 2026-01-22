@@ -65,6 +65,7 @@
                 <th class="name-col"></th>
                 <th class="pos-col"></th>
                 <th class="date-col"></th>
+                <th class="date-col"></th>
                 <th class="total-col"></th>
                 <th class="total-col"></th>
                 <th class="total-col"></th>
