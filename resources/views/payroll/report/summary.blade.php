@@ -37,6 +37,7 @@
         .pos-col { width: 80px; }
         .total-col { width: 45px; }
         .date-col { width: auto; font-size: 8px; }
+        .am-pm-col { width: 20px; font-size: 7px; background-color: #f9f9f9; }
         .vertical-text {
             writing-mode: vertical-rl;
             transform: rotate(180deg);
@@ -48,8 +49,8 @@
     <table>
         <thead>
             <tr>
-                <th rowspan="2" class="name-col">NAME</th>
-                <th rowspan="2" class="pos-col">POSITION</th>
+                <th rowspan="3" class="name-col">NAME</th>
+                <th rowspan="3" class="pos-col">POSITION</th>
                 <th colspan="{{ $dateCounts }}">SUMMARY OF DATES</th>
                 <th rowspan="2" class="total-col">Total<br>Days</th>
                 <th rowspan="2" class="total-col">Total<br>Overtime</th>
@@ -57,8 +58,19 @@
             </tr>
             <tr>
                 @foreach($dates as $date)
-                    <th class="date-col">{{ $date->format('m/d/Y') }}</th>
+                    <th class="date-col" colspan="2">{{ $date->format('m/d/Y') }}</th>
                 @endforeach
+            </tr>
+            <tr>
+                <th class="name-col"></th>
+                <th class="pos-col"></th>
+                @foreach($dates as $date)
+                    <th class="am-pm-col">AM</th>
+                    <th class="am-pm-col">PM</th>
+                @endforeach
+                <th class="total-col"></th>
+                <th class="total-col"></th>
+                <th class="total-col"></th>
             </tr>
         </thead>
         <tbody>
@@ -68,10 +80,15 @@
                     <td>{{ strtoupper($row['position']) }}</td>
                     @foreach($dates as $date)
                         @php 
-                            $val = $row['days'][$date->format('Y-m-d')];
+                            $dayData = $row['days'][$date->format('Y-m-d')];
+                            $am = $dayData['am'];
+                            $pm = $dayData['pm'];
                         @endphp
-                        <td style="background-color: {{ $val > 0 ? '#e6f3ff' : 'transparent' }}">
-                           {{ $val == 0 ? '0' : ($val == 0.5 ? '0.5' : '1') }}
+                        <td style="background-color: {{ $am > 0 ? '#e6f3ff' : 'transparent' }}">
+                           {{ $am == 1 ? '1' : '0' }}
+                        </td>
+                        <td style="background-color: {{ $pm > 0 ? '#e6f3ff' : 'transparent' }}">
+                           {{ $pm == 1 ? '1' : '0' }}
                         </td>
                     @endforeach
                     <td><strong>{{ $row['total_days'] }}</strong></td>

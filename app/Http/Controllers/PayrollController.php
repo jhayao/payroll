@@ -861,25 +861,21 @@ class PayrollController extends Controller
             foreach ($dates as $date) {
                 $dateStr = $date->format('Y-m-d');
                 $val = 0;
+                $amVal = 0;
+                $pmVal = 0;
 
                 if ($logs->has($dateStr)) {
                     $log = $logs[$dateStr];
 
                     // Simple logic: AM session + PM session
-                    // If am_in & am_out exists -> 0.5
-                    // If pm_in & pm_out exists -> 0.5
-
                     if ($log->am_in && $log->am_out) {
+                        $amVal = 1;
                         $val += 0.5;
                     }
                     if ($log->pm_in && $log->pm_out) {
+                        $pmVal = 1;
                         $val += 0.5;
                     }
-
-                    // Fallback: if they have DTR but incomplete/weird logs, maybe just count as 1 if present?
-                    // But user specifically asked for "summary of dates like this" showing 0.5.
-                    // If val is still 0 but log exists (e.g. forgot to time out), what to do?
-                    // For now, strict pairing seems safer for "0.5".
 
                     // Calculate Daily OT (minutes)
                     $ot = $e->dailyOvertime($log);
@@ -890,7 +886,7 @@ class PayrollController extends Controller
                     $row['total_undertime'] += $tardiness;
                 }
 
-                $row['days'][$dateStr] = $val;
+                $row['days'][$dateStr] = ['am' => $amVal, 'pm' => $pmVal];
                 $row['total_days'] += $val;
             }
 
@@ -902,7 +898,7 @@ class PayrollController extends Controller
         $options->set('isRemoteEnabled', true);
 
         $dompdf = new Dompdf($options);
-        $dateCounts = $from->diffInDays($to) + 1;
+        $dateCounts = ($from->diffInDays($to) + 1) * 2; // Double the count for AM/PM columns
         $dompdf->loadHtml(view('payroll.report.summary', compact('payroll', 'dates', 'data', 'dateCounts'))->render());
         $dompdf->setPaper('folio', 'landscape');
         $dompdf->render();
