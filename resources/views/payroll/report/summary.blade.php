@@ -53,16 +53,17 @@
     <table>
         <thead>
             <tr>
-                <th class="name-col">NAME</th>
-                <th class="pos-col">POSITION</th>
+                <th rowspan="2" class="name-col">NAME</th>
+                <th rowspan="2" class="pos-col">POSITION</th>
+                <th colspan="{{ $dateCounts }}">SUMMARY OF DATES</th>
+                <th rowspan="2" class="total-col">Total<br>Days</th>
+                <th rowspan="2" class="total-col">Total<br>Overtime</th>
+                <th rowspan="2" class="total-col">Total<br>Undertime</th>
+            </tr>
+            <tr>
                 @foreach($dates as $date)
-                    <th class="date-col">
-                        {{ $date->format('m/d') }}
-                    </th>
+                    <th class="date-col">{{ $date->format('m/d') }}</th>
                 @endforeach
-                <th class="total-col">Total<br>Days</th>
-                <th class="total-col">Total<br>Overtime</th>
-                <th class="total-col">Total<br>Undertime</th>
             </tr>
         </thead>
         <tbody>
