@@ -126,9 +126,13 @@
                                 <div x-show="!empSearch || '{{ strtolower($employee->full_name) }}'.includes(empSearch.toLowerCase())"
                                     class="flex items-center justify-between mb-2">
                                     <span class="text-sm">{{ $employee->full_name }}</span>
-                                    <input type="number" step="0.01" name="employee_amounts[{{ $employee->id }}]"
-                                        class="w-24 text-sm rounded border-gray-300"
-                                        :placeholder="type === 'fixed' ? 'Amount' : 'Percent'">
+                                    <div class="flex items-center space-x-2">
+                                        <input type="number" step="0.01" name="employee_amounts[{{ $employee->id }}]"
+                                            class="w-24 text-sm rounded border-gray-300"
+                                            :placeholder="type === 'fixed' ? 'Amount' : 'Percent'">
+                                        <input type="date" name="employee_dates[{{ $employee->id }}]"
+                                            class="w-32 text-sm rounded border-gray-300" title="Effective Date (Optional)">
+                                    </div>
                                 </div>
                             @endforeach
                         </div>
@@ -451,11 +455,23 @@
                                                             <div x-show="!empSearch || '{{ strtolower($employee->full_name) }}'.includes(empSearch.toLowerCase())"
                                                                 class="flex items-center justify-between mb-2">
                                                                 <span class="text-sm">{{ $employee->full_name }}</span>
-                                                                <input type="number" step="0.01"
-                                                                    name="employee_amounts[{{ $employee->id }}]"
-                                                                    value="{{ $pivotVal }}"
-                                                                    class="w-24 text-sm rounded border-gray-300"
-                                                                    :placeholder="type === 'fixed' ? 'Amount' : 'Percent'">
+                                                                    @php
+                                            $pivotDate = '';
+                                            if ($pivot) {
+                                                $pivotDate = $pivot->pivot->effective_date;
+                                            }
+                                        @endphp
+                                        <div class="flex items-center space-x-2">
+                                            <input type="number" step="0.01"
+                                                name="employee_amounts[{{ $employee->id }}]"
+                                                value="{{ $pivotVal }}"
+                                                class="w-24 text-sm rounded border-gray-300"
+                                                :placeholder="type === 'fixed' ? 'Amount' : 'Percent'">
+                                            <input type="date" name="employee_dates[{{ $employee->id }}]"
+                                                value="{{ $pivotDate }}"
+                                                class="w-32 text-sm rounded border-gray-300"
+                                                title="Effective Date (Optional)">
+                                        </div>
                                                             </div>
                                                         @endforeach
                                                     </div>

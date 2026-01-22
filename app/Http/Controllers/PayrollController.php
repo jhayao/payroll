@@ -254,10 +254,22 @@ class PayrollController extends Controller
                 $pivot = $allowance->employees->where('id', $e->id)->first();
                 if ($pivot) {
                     $shouldApply = true;
-                    if ($allowance->type === 'fixed') {
-                        $amount = $pivot->pivot->amount;
-                    } elseif ($allowance->type === 'percentage') {
-                        $percentage = $pivot->pivot->percentage;
+                    // Date Checking
+                    if ($pivot->pivot->effective_date) {
+                        $effDate = Carbon::parse($pivot->pivot->effective_date);
+                        $pFrom = Carbon::parse($from); // Use item from/to
+                        $pTo = Carbon::parse($to);
+                        if (! $effDate->between($pFrom, $pTo)) {
+                            $shouldApply = false;
+                        }
+                    }
+
+                    if ($shouldApply) {
+                        if ($allowance->type === 'fixed') {
+                            $amount = $pivot->pivot->amount;
+                        } elseif ($allowance->type === 'percentage') {
+                            $percentage = $pivot->pivot->percentage;
+                        }
                     }
                 }
             }
@@ -317,10 +329,22 @@ class PayrollController extends Controller
                 $pivot = $deduction->employees->where('id', $e->id)->first();
                 if ($pivot) {
                     $shouldApply = true;
-                    if ($deduction->type === 'fixed') {
-                        $amount = $pivot->pivot->amount;
-                    } elseif ($deduction->type === 'percentage') {
-                        $percentage = $pivot->pivot->percentage;
+                    // Date Checking
+                    if ($pivot->pivot->effective_date) {
+                        $effDate = Carbon::parse($pivot->pivot->effective_date);
+                        $pFrom = Carbon::parse($from); // Use item from/to
+                        $pTo = Carbon::parse($to);
+                        if (! $effDate->between($pFrom, $pTo)) {
+                            $shouldApply = false;
+                        }
+                    }
+
+                    if ($shouldApply) {
+                        if ($deduction->type === 'fixed') {
+                            $amount = $pivot->pivot->amount;
+                        } elseif ($deduction->type === 'percentage') {
+                            $percentage = $pivot->pivot->percentage;
+                        }
                     }
                 }
             }
@@ -535,6 +559,11 @@ class PayrollController extends Controller
             foreach ($request->employee_amounts as $id => $val) {
                 if ($val > 0) {
                     $pivotData = $request->type == 'fixed' ? ['amount' => $val] : ['percentage' => $val];
+                    
+                    if ($request->has('employee_dates') && isset($request->employee_dates[$id])) {
+                        $pivotData['effective_date'] = $request->employee_dates[$id];
+                    }
+
                     $allowance->employees()->attach($id, $pivotData);
                 }
             }
@@ -612,6 +641,11 @@ class PayrollController extends Controller
                             $data['percentage'] = $val;
                             $data['amount'] = 0;
                         }
+
+                        if ($request->has('employee_dates') && isset($request->employee_dates[$eid])) {
+                            $data['effective_date'] = $request->employee_dates[$eid];
+                        }
+
                         $syncData[$eid] = $data;
                     }
                 }
@@ -700,6 +734,11 @@ class PayrollController extends Controller
                         $data['percentage'] = $val;
                         $data['amount'] = 0;
                     }
+
+                    if ($request->has('employee_dates') && isset($request->employee_dates[$id])) {
+                        $data['effective_date'] = $request->employee_dates[$id];
+                    }
+
                     $syncData[$id] = $data;
                 }
             }
@@ -776,6 +815,11 @@ class PayrollController extends Controller
                             $data['percentage'] = $val;
                             $data['amount'] = 0;
                         }
+
+                        if ($request->has('employee_dates') && isset($request->employee_dates[$eid])) {
+                            $data['effective_date'] = $request->employee_dates[$eid];
+                        }
+                        
                         $syncData[$eid] = $data;
                     }
                 }

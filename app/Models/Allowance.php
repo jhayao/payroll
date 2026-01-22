@@ -29,7 +29,7 @@ class Allowance extends Model
     public function employees()
     {
         return $this->belongsToMany(Employee::class, 'allowance_employee')
-            ->withPivot(['amount', 'percentage']);
+            ->withPivot(['amount', 'percentage', 'effective_date']);
     }
 
 }

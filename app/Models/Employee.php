@@ -252,12 +252,12 @@ class Employee extends Authenticatable
 
     public function allowances()
     {
-        return $this->belongsToMany(Allowance::class, 'allowance_employee')->withPivot('amount', 'percentage');
+        return $this->belongsToMany(Allowance::class, 'allowance_employee')->withPivot('amount', 'percentage', 'effective_date');
     }
 
     public function deductions()
     {
-        return $this->belongsToMany(Deduction::class, 'deduction_employee')->withPivot('amount', 'percentage');
+        return $this->belongsToMany(Deduction::class, 'deduction_employee')->withPivot('amount', 'percentage', 'effective_date');
     }
 
     public function projects()

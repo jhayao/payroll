@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class Deduction extends Model
 {
     public $timestamps = false;
+
     protected $table = 'deductions';
+
     protected $fillable = [
         'description',
         'type',
@@ -16,7 +18,7 @@ class Deduction extends Model
         'percentage',
         'schedule',
         'target_month',
-        'target_year'
+        'target_year',
     ];
 
     public function positions()
@@ -29,6 +31,6 @@ class Deduction extends Model
     public function employees()
     {
         return $this->belongsToMany(Employee::class, 'deduction_employee')
-            ->withPivot(['amount', 'percentage']);
+            ->withPivot(['amount', 'percentage', 'effective_date']);
     }
 }
