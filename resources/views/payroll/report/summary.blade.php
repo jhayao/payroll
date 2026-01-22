@@ -62,7 +62,7 @@
             </tr>
             <tr>
                 @foreach($dates as $date)
-                    <th class="date-col">{{ $date->format('m/d') }}</th>
+                    <th class="date-col">{{ $date->format('m/d/yyyy') }}</th>
                 @endforeach
             </tr>
         </thead>
