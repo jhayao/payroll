@@ -903,6 +903,21 @@ class AdminController extends Controller
 
         $project = Project::findOrFail($id);
         
+        // Check for active project conflicts
+        foreach ($request->employee_ids as $employee_id) {
+             $hasActiveProject = Project::whereHas('employees', function($q) use ($employee_id) {
+                 $q->where('employees.id', $employee_id);
+             })
+             ->where('id', '!=', $id)
+             ->whereNotIn('status', ['completed', 'on_hold'])
+             ->exists();
+
+             if ($hasActiveProject) {
+                 $employee = Employee::find($employee_id);
+                 return back()->withErrors(['employee_ids' => "Employee {$employee->full_name} is already assigned to another active project."])->withInput();
+             }
+        }
+
         $count = 0;
         foreach ($request->employee_ids as $employee_id) {
              if (!$project->employees()->where('employee_project.employee_id', $employee_id)->exists()) {
