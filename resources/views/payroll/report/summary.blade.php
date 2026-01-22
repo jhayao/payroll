@@ -45,11 +45,6 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        <h2>SUMMARY OF DATES</h2>
-        <p>{{ $payroll->department->name }} | {{ \Carbon\Carbon::parse($payroll->date_from)->format('M d, Y') }} - {{ \Carbon\Carbon::parse($payroll->date_to)->format('M d, Y') }}</p>
-    </div>
-
     <table>
         <thead>
             <tr>
@@ -62,7 +57,7 @@
             </tr>
             <tr>
                 @foreach($dates as $date)
-                    <th class="date-col">{{ $date->format('m/d/yyyy') }}</th>
+                    <th class="date-col">{{ $date->format('m/d/Y') }}</th>
                 @endforeach
             </tr>
         </thead>
