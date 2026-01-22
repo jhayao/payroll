@@ -64,10 +64,7 @@
             <tr>
                 <th class="name-col"></th>
                 <th class="pos-col"></th>
-                @foreach($dates as $date)
-                    <th class="am-pm-col">AM</th>
-                    <th class="am-pm-col">PM</th>
-                @endforeach
+                <th class="date-col"></th>
                 <th class="total-col"></th>
                 <th class="total-col"></th>
                 <th class="total-col"></th>
