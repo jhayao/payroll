@@ -14,7 +14,7 @@ class ApiController extends Controller
     public function makeLog(Request $request)
     {
         $request->validate([
-            'employee_id' => 'required|exists:employees,id',
+            'employee_id' => 'required',
             'mark' => 'required',
             'date_log' => 'required|date',
             'time_log' => 'required',
@@ -35,6 +35,15 @@ class ApiController extends Controller
                 'status' => 'failed',
                 'message' => 'Invalid log type.',
             ], 422);
+        }
+
+        $employee = Employee::find($request->employee_id);
+        if (! $employee) {
+            // "Do nothing" - Return success status but do not save anything
+            return response()->json([
+                'status' => 'failed', // Or 'success' if we want to fake it completely, but 'failed' cleanly communicates "not processed" without 500
+                'message' => 'Employee not found.',
+            ], 200);
         }
 
         $today = $request->date_log;
