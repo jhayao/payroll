@@ -42,7 +42,10 @@ class PayrollController extends Controller
             return $e;
         });
         
-        return view('payroll.create', compact('departments', 'employees'));
+        // Fetch active projects
+        $projects = \App\Models\Project::where('status', 'active')->pluck('name', 'id');
+
+        return view('payroll.create', compact('departments', 'employees', 'projects'));
     }
 
     public function save(Request $request)
@@ -50,8 +53,9 @@ class PayrollController extends Controller
         $request->validate([
             'date_from' => ['required', 'date'],
             'date_to' => ['required', 'date', 'after_or_equal:date_from'],
-            'generation_type' => ['required', 'in:all,individual'],
+            'generation_type' => ['required', 'in:all,individual,project'],
             'employee_id' => ['nullable', 'required_if:generation_type,individual', 'exists:employees,id'],
+            'project_id' => ['nullable', 'required_if:generation_type,project', 'exists:projects,id'],
             'department' => ['required', 'exists:departments,id'],
             'salary_type' => ['nullable', 'in:weekly,semi_monthly'],
         ], [
@@ -61,6 +65,7 @@ class PayrollController extends Controller
             'date_to.date' => 'This must be a valid date.',
             'date_to.after_or_equal' => 'This must after or equal to date from.',
             'employee_id.required_if' => 'Please select an employee for individual generation.',
+            'project_id.required_if' => 'Please select a project.',
         ]);
 
         $payroll = Payroll::where('department_id', $request->department)
@@ -96,6 +101,17 @@ class PayrollController extends Controller
                  throw ValidationException::withMessages(['employee_id' => 'Employee does not belong to the selected department.']);
             }
             $employeesToProcess[] = $employee;
+        } elseif ($request->generation_type === 'project') {
+             $project = \App\Models\Project::findOrFail($request->project_id);
+             // Get active employees in this project belonging to the selected department
+             $query = $project->employees()
+                ->where('department_id', $request->department);
+
+             if ($request->salary_type) {
+                $query->where('salary_type', $request->salary_type);
+             }
+             $employeesToProcess = $query->get();
+
         } else {
             $query = Employee::where('department_id', $request->department);
             

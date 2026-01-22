@@ -31,6 +31,13 @@
                                         Employees</label>
                                 </div>
                                 <div class="flex items-center">
+                                    <input id="type-project" type="radio" value="project" name="generation_type"
+                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                    <label for="type-project"
+                                        class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">By
+                                        Project</label>
+                                </div>
+                                <div class="flex items-center">
                                     <input id="type-individual" type="radio" value="individual" name="generation_type"
                                         class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                                     <label for="type-individual"
@@ -38,6 +45,10 @@
                                         Employee</label>
                                 </div>
                             </div>
+                        </div>
+
+                        <div id="project-wrapper" class="hidden mb-4">
+                            <x-select name="project_id" label="Project" :options="$projects" />
                         </div>
 
                         <x-select name="department" label="Department" :options="$departments" />
@@ -105,16 +116,23 @@
                 const salaryTypeSelect = document.querySelector('select[name="salary_type"]');
                 const typeRadios = document.querySelectorAll('input[name="generation_type"]');
 
+                const projectWrapper = document.getElementById('project-wrapper');
+
                 function toggleEmployeeSelect() {
-                    const isIndividual = document.querySelector('input[name="generation_type"]:checked').value === 'individual';
-                    if (isIndividual) {
+                    const type = document.querySelector('input[name="generation_type"]:checked').value;
+
+                    // Reset visibility
+                    employeeWrapper.classList.add('hidden');
+                    projectWrapper.classList.add('hidden');
+                    salaryTypeWrapper.classList.remove('hidden'); // Default show salary type
+
+                    if (type === 'individual') {
                         employeeWrapper.classList.remove('hidden');
                         salaryTypeWrapper.classList.add('hidden');
-                        salaryTypeSelect.value = ''; // Reset value
+                        salaryTypeSelect.value = '';
                         filterEmployees();
-                    } else {
-                        employeeWrapper.classList.add('hidden');
-                        salaryTypeWrapper.classList.remove('hidden');
+                    } else if (type === 'project') {
+                        projectWrapper.classList.remove('hidden');
                     }
                 }
 
