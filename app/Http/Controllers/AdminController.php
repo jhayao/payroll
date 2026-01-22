@@ -844,7 +844,11 @@ class AdminController extends Controller
     {
         $project = Project::with(['timeKeeper', 'employees'])->findOrFail($id);
         // Fetch all employees for assignment, but only Time Keepers for time_keeper dropdown if needed
-        $employees = Employee::orderBy('lastname')->orderBy('firstname')->get();
+        // RESTRICTION: Only Engineering Department
+        $employees = Employee::whereHas('department', function($q) {
+            $q->where('name', 'like', '%Engineering%');
+        })->orderBy('lastname')->orderBy('firstname')->get();
+
         $timeKeepers = Employee::where('position_id', 14)->orderBy('lastname')->orderBy('firstname')->get();
         return view('projects.view', compact('project', 'employees', 'timeKeepers'));
     }
@@ -905,6 +909,13 @@ class AdminController extends Controller
         
         // Check for active project conflicts
         foreach ($request->employee_ids as $employee_id) {
+             $employee = Employee::find($employee_id);
+
+             // RESTRICTION: Check Department
+             if (!$employee->department || !str_contains($employee->department->name, 'Engineering')) {
+                 return back()->withErrors(['employee_ids' => "Employee {$employee->full_name} does not belong to the Engineering Department."])->withInput();
+             }
+
              $hasActiveProject = Project::whereHas('employees', function($q) use ($employee_id) {
                  $q->where('employees.id', $employee_id);
              })
@@ -913,7 +924,6 @@ class AdminController extends Controller
              ->exists();
 
              if ($hasActiveProject) {
-                 $employee = Employee::find($employee_id);
                  return back()->withErrors(['employee_ids' => "Employee {$employee->full_name} is already assigned to another active project."])->withInput();
              }
         }
