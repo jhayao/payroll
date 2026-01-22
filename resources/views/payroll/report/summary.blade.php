@@ -96,10 +96,10 @@
                         @endphp
 
                         <td class="{{ $day['attendance'] > 0 ? 'active-cell' : '' }}">
-                            {{ number_format($day['attendance'], 1) }}
+                            {{ $day['attendance'] + 0 }}
                         </td>
                         <td>
-                            {{ $day['ot'] > 0 ? $day['ot'] : '' }}
+                            {{ $day['ot'] + 0 }}
                         </td>
                     @endforeach
                     <td class="bold">{{ $row['total_days'] }}</td>
