@@ -49,8 +49,8 @@
     <table>
         <thead>
             <tr>
-                <th rowspan="3" class="name-col">NAME</th>
-                <th rowspan="3" class="pos-col">POSITION</th>
+                <th rowspan="2" class="name-col">NAME</th>
+                <th rowspan="2" class="pos-col">POSITION</th>
                 <th colspan="{{ $dateCounts }}">SUMMARY OF DATES</th>
                 <th rowspan="2" class="total-col">Total<br>Days</th>
                 <th rowspan="2" class="total-col">Total<br>Overtime</th>
@@ -64,7 +64,6 @@
             <tr>
                 <th class="name-col"></th>
                 <th class="pos-col"></th>
-                <th class="date-col"></th>
                 <th class="date-col"></th>
                 <th class="total-col"></th>
                 <th class="total-col"></th>
