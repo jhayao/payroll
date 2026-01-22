@@ -219,9 +219,14 @@ class PayrollController extends Controller
         // Auto-add Allowances
         foreach ($allAllowances as $allowance) {
             // Check Schedule
-            $payrollMonth = \Carbon\Carbon::parse($to)->month;
-            if ($allowance->schedule === 'specific_month' && $allowance->target_month != $payrollMonth) {
-                continue;
+            $payrollDate = \Carbon\Carbon::parse($to);
+            if ($allowance->schedule === 'specific_month') {
+                if ($allowance->target_month != $payrollDate->month) {
+                    continue;
+                }
+                if ($allowance->target_year && $allowance->target_year != $payrollDate->year) {
+                    continue;
+                }
             }
 
             $amount = 0;
@@ -277,9 +282,14 @@ class PayrollController extends Controller
         // Auto-add Deductions
         foreach ($allDeductions as $deduction) {
             // Check Schedule
-            $payrollMonth = \Carbon\Carbon::parse($to)->month;
-            if ($deduction->schedule === 'specific_month' && $deduction->target_month != $payrollMonth) {
-                continue;
+            $payrollDate = \Carbon\Carbon::parse($to);
+            if ($deduction->schedule === 'specific_month') {
+                if ($deduction->target_month != $payrollDate->month) {
+                    continue;
+                }
+                if ($deduction->target_year && $deduction->target_year != $payrollDate->year) {
+                    continue;
+                }
             }
 
             $amount = 0;
@@ -500,48 +510,34 @@ class PayrollController extends Controller
             ],
             'schedule' => ['required', 'in:every_payroll,specific_month'],
             'target_month' => ['nullable', 'required_if:schedule,specific_month', 'integer', 'between:1,12'],
+            'target_year' => ['nullable', 'required_if:schedule,specific_month', 'integer', 'min:2020', 'max:2099'],
         ]);
 
         $allowance = Allowance::create([
             'description' => $request->description,
             'type' => $request->type,
             'scope' => $request->scope,
-            'amount' => ($request->scope == 'all' && $request->type == 'fixed') ? $request->amount : null,
-            'percentage' => ($request->scope == 'all' && $request->type == 'percentage') ? $request->percentage : null,
+            'amount' => $request->amount,
+            'percentage' => $request->percentage,
             'schedule' => $request->schedule,
-            'target_month' => ($request->schedule == 'specific_month') ? $request->target_month : null,
+            'target_month' => $request->schedule === 'specific_month' ? $request->target_month : null,
+            'target_year' => $request->schedule === 'specific_month' ? $request->target_year : null,
         ]);
 
-        if ($request->scope === 'position' && $request->has('position_amounts')) {
-            $syncData = [];
+        if ($request->scope == 'position') {
             foreach ($request->position_amounts as $id => $val) {
                 if ($val > 0) {
-                    $data = [];
-                    if ($request->type == 'fixed') {
-                        $data['amount'] = $val;
-                    } else {
-                        $data['percentage'] = $val;
-                        $data['amount'] = 0;
-                    }
-                    $syncData[$id] = $data;
+                    $pivotData = $request->type == 'fixed' ? ['amount' => $val] : ['percentage' => $val];
+                    $allowance->positions()->attach($id, $pivotData);
                 }
             }
-            $allowance->positions()->sync($syncData);
-        } elseif ($request->scope === 'employee' && $request->has('employee_amounts')) {
-            $syncData = [];
+        } elseif ($request->scope == 'employee') {
             foreach ($request->employee_amounts as $id => $val) {
                 if ($val > 0) {
-                    $data = [];
-                    if ($request->type == 'fixed') {
-                        $data['amount'] = $val;
-                    } else {
-                        $data['percentage'] = $val;
-                        $data['amount'] = 0;
-                    }
-                    $syncData[$id] = $data;
+                    $pivotData = $request->type == 'fixed' ? ['amount' => $val] : ['percentage' => $val];
+                    $allowance->employees()->attach($id, $pivotData);
                 }
             }
-            $allowance->employees()->sync($syncData);
         }
 
         return redirect()->route('payroll.allowances')->with('status', 'Saved.');
@@ -568,6 +564,7 @@ class PayrollController extends Controller
             ],
             'schedule' => ['required', 'in:every_payroll,specific_month'],
             'target_month' => ['nullable', 'required_if:schedule,specific_month', 'integer', 'between:1,12'],
+            'target_year' => ['nullable', 'required_if:schedule,specific_month', 'integer', 'min:2020', 'max:2099'],
         ]);
 
         $allowance = Allowance::find($id);
@@ -575,10 +572,11 @@ class PayrollController extends Controller
             'description' => $request->description,
             'type' => $request->type,
             'scope' => $request->scope,
-            'amount' => ($request->scope == 'all' && $request->type == 'fixed') ? $request->amount : null,
-            'percentage' => ($request->scope == 'all' && $request->type == 'percentage') ? $request->percentage : null,
+            'amount' => $request->amount,
+            'percentage' => $request->percentage,
             'schedule' => $request->schedule,
-            'target_month' => ($request->schedule == 'specific_month') ? $request->target_month : null,
+            'target_month' => $request->schedule === 'specific_month' ? $request->target_month : null,
+            'target_year' => $request->schedule === 'specific_month' ? $request->target_year : null,
         ]);
 
         if ($request->scope === 'position') {

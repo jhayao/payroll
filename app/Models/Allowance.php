@@ -9,7 +9,14 @@ class Allowance extends Model
     public $timestamps = false;
     protected $table = 'allowances';
     protected $fillable = [
-        'description', 'type', 'scope', 'amount', 'percentage', 'schedule', 'target_month'
+        'description',
+        'type',
+        'scope',
+        'amount',
+        'percentage',
+        'schedule',
+        'target_month',
+        'target_year'
     ];
 
     public function positions()

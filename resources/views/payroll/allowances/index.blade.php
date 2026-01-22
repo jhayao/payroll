@@ -79,13 +79,17 @@
                     </div>
 
                     <div class="mt-4" x-show="schedule === 'specific_month'">
-                        <x-select name="target_month" label="Target Month">
-                            @foreach(range(1, 12) as $m)
-                                <option value="{{ $m }}" {{ old('target_month') == $m ? 'selected' : '' }}>
-                                    {{ date('F', mktime(0, 0, 0, $m, 1)) }}
-                                </option>
-                            @endforeach
-                        </x-select>
+                        <div class="grid grid-cols-2 gap-4">
+                            <x-select name="target_month" label="Target Month">
+                                @foreach(range(1, 12) as $m)
+                                    <option value="{{ $m }}" {{ old('target_month') == $m ? 'selected' : '' }}>
+                                        {{ date('F', mktime(0, 0, 0, $m, 1)) }}
+                                    </option>
+                                @endforeach
+                            </x-select>
+                            <x-input name="target_year" label="Target Year (Optional)" type="number"
+                                value="{{ old('target_year', date('Y')) }}" placeholder="Year" />
+                        </div>
                     </div>
 
                     <div class="mt-4" x-show="scope === 'all' && type === 'fixed'">
@@ -202,6 +206,7 @@
                                 <td>
                                     @if($e->schedule == 'specific_month')
                                         {{ date('F', mktime(0, 0, 0, $e->target_month, 1)) }}
+                                        @if($e->target_year) {{ $e->target_year }} @endif
                                     @else
                                         Every Payroll
                                     @endif
@@ -224,7 +229,8 @@
                                                     <span class="text-gray-900 dark:text-white">
                                                         @if($e->schedule == 'specific_month')
                                                             Specific Month
-                                                            ({{ date('F', mktime(0, 0, 0, $e->target_month, 1)) }})
+                                                            ({{ date('F', mktime(0, 0, 0, $e->target_month, 1)) }}
+                                                            @if($e->target_year) {{ $e->target_year }} @endif)
                                                         @else
                                                             Every Payroll
                                                         @endif
@@ -372,13 +378,18 @@
                                                 </div>
 
                                                 <div class="mt-4" x-show="schedule === 'specific_month'">
-                                                    <x-select name="target_month" label="Target Month">
-                                                        @foreach(range(1, 12) as $m)
-                                                            <option value="{{ $m }}" {{ old('target_month', $e->target_month) == $m ? 'selected' : '' }}>
-                                                                {{ date('F', mktime(0, 0, 0, $m, 1)) }}
-                                                            </option>
-                                                        @endforeach
-                                                    </x-select>
+                                                    <div class="grid grid-cols-2 gap-4">
+                                                        <x-select name="target_month" label="Target Month">
+                                                            @foreach(range(1, 12) as $m)
+                                                                <option value="{{ $m }}" {{ old('target_month', $e->target_month) == $m ? 'selected' : '' }}>
+                                                                    {{ date('F', mktime(0, 0, 0, $m, 1)) }}
+                                                                </option>
+                                                            @endforeach
+                                                        </x-select>
+                                                        <x-input name="target_year" label="Target Year (Optional)"
+                                                            type="number" value="{{ old('target_year', $e->target_year) }}"
+                                                            placeholder="Year" />
+                                                    </div>
                                                 </div>
 
                                                 <div class="mt-4" x-show="scope === 'all' && type === 'fixed'">
