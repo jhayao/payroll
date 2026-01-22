@@ -905,8 +905,7 @@ class PayrollController extends Controller
             foreach ($dates as $date) {
                 $dateStr = $date->format('Y-m-d');
                 $val = 0;
-                $amVal = 0;
-                $pmVal = 0;
+                $otHours = 0;
 
                 if ($logs->has($dateStr)) {
                     $log = $logs[$dateStr];
