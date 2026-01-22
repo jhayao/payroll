@@ -13,6 +13,13 @@ class ApiController extends Controller
 {
     public function makeLog(Request $request)
     {
+        $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'mark' => 'required',
+            'date_log' => 'required|date',
+            'time_log' => 'required',
+        ]);
+
         // ✅ Allowed columns (SECURITY)
         $allowedMarks = [
             'am_in', 'am_out',
@@ -70,6 +77,12 @@ class ApiController extends Controller
 
     public function viewDTR(Request $request)
     {
+        $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'date_from' => 'required|date',
+            'date_to' => 'required|date',
+        ]);
+
         $id = $request->employee_id;
         $from = $request->date_from;
         $to = $request->date_to;
@@ -138,13 +151,17 @@ class ApiController extends Controller
         return response()->json($employees);
     }
 
-    public function getTimekeeperProjects(Request $request) 
+    public function getTimekeeperProjects(Request $request)
     {
+        $request->validate([
+            'timekeeper_id' => 'required|exists:employees,id',
+        ]);
+
         $timeKeeperId = $request->timekeeper_id;
-        
+
         $projects = \App\Models\Project::where('time_keeper_id', $timeKeeperId)
             ->get()
-            ->map(function($p) {
+            ->map(function ($p) {
                 return [
                     'id' => $p->id,
                     'name' => $p->name,
@@ -160,6 +177,11 @@ class ApiController extends Controller
 
     public function getTimekeeperEmployees(Request $request)
     {
+        $request->validate([
+            'timekeeper_id' => 'required|exists:employees,id',
+            'project_id' => 'nullable|exists:projects,id',
+        ]);
+
         $timeKeeperId = $request->timekeeper_id;
         $projectId = $request->project_id; // Optional filter
 
@@ -170,18 +192,18 @@ class ApiController extends Controller
         }
 
         $projects = $query->with('employees')->get();
-        
+
         // Collect all unique employees
         $employees = collect();
         foreach ($projects as $project) {
             foreach ($project->employees as $employee) {
-                if (!$employees->contains('id', $employee->id)) {
+                if (! $employees->contains('id', $employee->id)) {
                     $employees->push($employee);
                 }
             }
         }
 
-        $data = $employees->map(function($e) {
+        $data = $employees->map(function ($e) {
             return [
                 'id' => $e->id,
                 'name' => $e->full_name,
@@ -200,6 +222,13 @@ class ApiController extends Controller
 
     public function getTimekeeperAttendance(Request $request)
     {
+        $request->validate([
+            'timekeeper_id' => 'required|exists:employees,id',
+            'project_id' => 'nullable|exists:projects,id',
+            'date_from' => 'required|date',
+            'date_to' => 'required|date',
+        ]);
+
         $timeKeeperId = $request->timekeeper_id;
         $dateFrom = $request->date_from;
         $dateTo = $request->date_to;
@@ -221,12 +250,12 @@ class ApiController extends Controller
         // 2. Fetch DTRs for these employees within date range
         $dtrs = Dtr::whereIn('employee_id', $employeeIds)
             ->whereBetween('log_date', [$dateFrom, $dateTo])
-            ->with(['employee' => function($q) {
+            ->with(['employee' => function ($q) {
                 $q->select('id', 'lastname', 'firstname', 'middlename', 'suffix'); // Select minimal columns
             }])
             ->orderBy('log_date', 'desc')
             ->get()
-            ->map(function($dtr) {
+            ->map(function ($dtr) {
                 return [
                     'id' => $dtr->id,
                     'employee_id' => $dtr->employee_id,
