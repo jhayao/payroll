@@ -67,30 +67,11 @@
                                     class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Every
                                     Payroll</label>
                             </div>
-                            <div class="flex items-center">
-                                <input id="schedule-specific-add" type="radio" value="specific_month" name="schedule"
-                                    x-model="schedule"
-                                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
-                                <label for="schedule-specific-add"
-                                    class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Specific
-                                    Month</label>
-                            </div>
                         </div>
+
                     </div>
 
-                    <div class="mt-4" x-show="schedule === 'specific_month'">
-                        <div class="grid grid-cols-2 gap-4">
-                            <x-select name="target_month" label="Target Month">
-                                @foreach(range(1, 12) as $m)
-                                    <option value="{{ $m }}" {{ old('target_month') == $m ? 'selected' : '' }}>
-                                        {{ date('F', mktime(0, 0, 0, $m, 1)) }}
-                                    </option>
-                                @endforeach
-                            </x-select>
-                            <x-input name="target_year" label="Target Year (Optional)" type="number"
-                                value="{{ old('target_year', date('Y')) }}" placeholder="Year" />
-                        </div>
-                    </div>
+
 
                     <div class="mt-4" x-show="scope === 'all' && type === 'fixed'">
                         <x-input name="amount" label="Amount" type="number" step="0.01" value="{{ old('amount') }}" />
@@ -370,31 +351,11 @@
                                                                 class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Every
                                                                 Payroll</label>
                                                         </div>
-                                                        <div class="flex items-center">
-                                                            <input id="schedule-specific-{{ $e->id }}" type="radio"
-                                                                value="specific_month" name="schedule" x-model="schedule"
-                                                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
-                                                            <label for="schedule-specific-{{ $e->id }}"
-                                                                class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Specific
-                                                                Month</label>
-                                                        </div>
                                                     </div>
+
                                                 </div>
 
-                                                <div class="mt-4" x-show="schedule === 'specific_month'">
-                                                    <div class="grid grid-cols-2 gap-4">
-                                                        <x-select name="target_month" label="Target Month">
-                                                            @foreach(range(1, 12) as $m)
-                                                                <option value="{{ $m }}" {{ old('target_month', $e->target_month) == $m ? 'selected' : '' }}>
-                                                                    {{ date('F', mktime(0, 0, 0, $m, 1)) }}
-                                                                </option>
-                                                            @endforeach
-                                                        </x-select>
-                                                        <x-input name="target_year" label="Target Year (Optional)"
-                                                            type="number" value="{{ old('target_year', $e->target_year) }}"
-                                                            placeholder="Year" />
-                                                    </div>
-                                                </div>
+
 
                                                 <div class="mt-4" x-show="scope === 'all' && type === 'fixed'">
                                                     <x-input name="amount" label="Amount" type="number" step="0.01"

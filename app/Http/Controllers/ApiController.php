@@ -281,4 +281,34 @@ class ApiController extends Controller
 
         return response()->json($dtrs);
     }
+    public function getProjectEmployeeIds(Request $request)
+    {
+        $request->validate([
+            'timekeeper_id' => 'required|exists:employees,id',
+            'project_id' => 'required|exists:projects,id',
+        ]);
+
+        $timeKeeperId = $request->timekeeper_id;
+        $projectId = $request->project_id;
+
+        // Verify that the project belongs to the timekeeper
+        $project = \App\Models\Project::where('id', $projectId)
+            ->where('time_keeper_id', $timeKeeperId)
+            ->first();
+
+        if (! $project) {
+            return response()->json([
+                'status' => 'failed',
+                'message' => 'Unauthorized access or project not found for this timekeeper.',
+            ], 403);
+        }
+
+        $employeeIds = $project->employees()->pluck('employees.id');
+
+        return response()->json([
+            'status' => 'success',
+            'project_id' => $project->id,
+            'employee_ids' => $employeeIds,
+        ]);
+    }
 }

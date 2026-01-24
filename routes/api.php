@@ -17,5 +17,6 @@ Route::controller(ApiController::class)->group(function () {
     Route::get('timekeeper/projects', 'getTimekeeperProjects');
     Route::get('timekeeper/employees', 'getTimekeeperEmployees');
     Route::get('timekeeper/attendance', 'getTimekeeperAttendance');
+    Route::get('timekeeper/project-employee-ids', 'getProjectEmployeeIds');
 
 });
