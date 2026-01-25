@@ -559,7 +559,7 @@ class PayrollController extends Controller
             foreach ($request->employee_amounts as $id => $val) {
                 if ($val > 0) {
                     $pivotData = $request->type == 'fixed' ? ['amount' => $val] : ['percentage' => $val];
-                    
+
                     if ($request->has('employee_dates') && isset($request->employee_dates[$id])) {
                         $pivotData['effective_date'] = $request->employee_dates[$id];
                     }
@@ -819,7 +819,7 @@ class PayrollController extends Controller
                         if ($request->has('employee_dates') && isset($request->employee_dates[$eid])) {
                             $data['effective_date'] = $request->employee_dates[$eid];
                         }
-                        
+
                         $syncData[$eid] = $data;
                     }
                 }
@@ -1081,9 +1081,14 @@ class PayrollController extends Controller
             // Auto-add Deductions
             foreach ($allDeductions as $deduction) {
                 // Check Schedule
-                $payrollMonth = \Carbon\Carbon::parse($to)->month;
-                if ($deduction->schedule === 'specific_month' && $deduction->target_month != $payrollMonth) {
-                    continue;
+                $payrollDate = \Carbon\Carbon::parse($to);
+                if ($deduction->schedule === 'specific_month') {
+                    if ($deduction->target_month != $payrollDate->month) {
+                        continue;
+                    }
+                    if ($deduction->target_year && $deduction->target_year != $payrollDate->year) {
+                        continue;
+                    }
                 }
 
                 $amount = 0;
@@ -1111,6 +1116,15 @@ class PayrollController extends Controller
                     $pivot = $deduction->employees->where('id', $e->id)->first();
                     if ($pivot) {
                         $shouldApply = true;
+                        // Date Checking
+                        if ($pivot->pivot->effective_date) {
+                            $effDate = Carbon::parse($pivot->pivot->effective_date);
+                            $pFrom = Carbon::parse($from);
+                            $pTo = Carbon::parse($to);
+                            if (! $effDate->between($pFrom, $pTo)) {
+                                $shouldApply = false;
+                            }
+                        }
                         if ($deduction->type === 'fixed') {
                             $amount = $pivot->pivot->amount;
                         } elseif ($deduction->type === 'percentage') {
